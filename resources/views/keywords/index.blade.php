@@ -80,9 +80,9 @@
         <table class="w-full text-sm">
             <thead>
                 <tr class="border-b border-gray-100">
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 w-10">#</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Keyword</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Website</th>
+                    <th class="sticky left-0 z-20 bg-white px-4 py-3 text-left text-xs font-medium text-gray-500 w-10">#</th>
+                    <th class="sticky left-10 z-20 bg-white min-w-[180px] px-4 py-3 text-left text-xs font-medium text-gray-500">Keyword</th>
+                    <th class="sticky left-[220px] z-20 bg-white min-w-[120px] border-r border-gray-200 px-4 py-3 text-left text-xs font-medium text-gray-500">Website</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500">Target URL</th>
                     <th class="px-4 py-3 text-center text-xs font-medium text-gray-500">Searches/mo</th>
                     <th class="px-4 py-3 text-center text-xs font-medium text-gray-500">Volume</th>
@@ -122,16 +122,16 @@
                     ];
                     $intents = $kw->intent ? array_filter(explode(',', $kw->intent)) : [];
                 @endphp
-                <tr class="hover:bg-gray-50 transition-colors">
-                    <td class="px-4 py-3 text-gray-400 text-xs">{{ $keywords->firstItem() + $i }}</td>
+                <tr class="group hover:bg-gray-50 transition-colors">
+                    <td class="sticky left-0 z-10 bg-white group-hover:bg-gray-50 px-4 py-3 text-gray-400 text-xs">{{ $keywords->firstItem() + $i }}</td>
 
                     {{-- Keyword --}}
-                    <td class="px-4 py-3">
+                    <td class="sticky left-10 z-10 bg-white group-hover:bg-gray-50 min-w-[180px] px-4 py-3">
                         <span class="font-medium text-gray-800">{{ $kw->keyword }}</span>
                     </td>
 
                     {{-- Website --}}
-                    <td class="px-4 py-3">
+                    <td class="sticky left-[220px] z-10 bg-white group-hover:bg-gray-50 min-w-[120px] border-r border-gray-200 px-4 py-3">
                         @if($kw->website)
                         <a href="{{ route('websites.show', $kw->website) }}"
                            class="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 hover:underline">
