@@ -6,12 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class ActivityLog extends Model
 {
-    public $timestamps = false;   // only created_at, no updated_at
+    public $timestamps = false;
 
     protected $fillable = [
-        'user_id', 'role_name', 'action', 'module',
-        'record_id', 'record_label', 'old_values', 'new_values',
-        'description', 'ip_address', 'user_agent',
+        'user_id', 'action', 'model_type', 'model_id',
+        'description', 'old_values', 'new_values',
+        'ip_address', 'user_agent',
     ];
 
     protected $casts = [
@@ -23,5 +23,25 @@ class ActivityLog extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public static function record(
+        int $userId, string $action,
+        ?string $modelType = null, ?int $modelId = null,
+        ?string $description = null,
+        ?array $oldValues = null, ?array $newValues = null
+    ): void {
+        static::create([
+            'user_id'    => $userId,
+            'action'     => $action,
+            'model_type' => $modelType,
+            'model_id'   => $modelId,
+            'description'=> $description,
+            'old_values' => $oldValues,
+            'new_values' => $newValues,
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'created_at' => now(),
+        ]);
     }
 }

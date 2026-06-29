@@ -118,6 +118,14 @@ return [
             'replace_placeholders' => true,
         ],
 
+        'jobs' => [
+            'driver' => 'daily',
+            'path'   => storage_path('logs/jobs.log'),
+            'level'  => 'debug',
+            'days'   => 30,
+            'replace_placeholders' => true,
+        ],
+
         'null' => [
             'driver' => 'monolog',
             'handler' => NullHandler::class,

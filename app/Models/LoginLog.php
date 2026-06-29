@@ -9,10 +9,12 @@ class LoginLog extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'user_id', 'email_attempted', 'status', 'ip_address', 'user_agent',
+        'user_id', 'email', 'status', 'failure_reason',
+        'ip_address', 'user_agent', 'country', 'city',
     ];
 
-    protected $casts = ['created_at' => 'datetime'];
+    protected $casts = [
+        'created_at' => 'datetime'];
 
     public function user()
     {

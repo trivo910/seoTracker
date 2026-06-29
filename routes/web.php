@@ -1,67 +1,84 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ApiSettingsController;
+use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\CustomerController;
-use App\Http\Controllers\TransactionController;
-use App\Http\Controllers\ReportController;
+use App\Http\Controllers\KeywordController;
+use App\Http\Controllers\RankingsController;
 use App\Http\Controllers\UserController;
-use App\Http\Controllers\AgentController;
-use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\WebsiteController;
+use Illuminate\Support\Facades\Route;
 
-// ── Public routes ─────────────────────────────────────────────────────────
+/*
+|--------------------------------------------------------------------------
+| Auth routes (public)
+|--------------------------------------------------------------------------
+*/
 Route::middleware('guest')->group(function () {
-    Route::get('/login',         [AuthController::class, 'showLogin'])->name('login');
-    Route::post('/login',        [AuthController::class, 'login'])->name('login.post');
+    Route::get('/login',  [AuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AuthController::class, 'login']);
 });
 
 Route::post('/logout', [AuthController::class, 'logout'])
     ->middleware('auth')
     ->name('logout');
 
-// ── Authenticated routes ──────────────────────────────────────────────────
-Route::middleware('auth')->group(function () {
+/*
+|--------------------------------------------------------------------------
+| Authenticated routes
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth'])->group(function () {
 
-    // Dashboard
-    Route::get('/',          [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('/dashboard', [DashboardController::class, 'index']);
+    // ── Dashboard (portfolio) ────────────────────────────────────
+    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
-    // ── Customers ─────────────────────────────────────────────
-    Route::resource('customers', CustomerController::class);
-    Route::patch('customers/{customer}/toggle-status', [CustomerController::class, 'toggleStatus'])
-        ->name('customers.toggle-status');
+    // ── Websites ─────────────────────────────────────────────────
+    Route::get('/websites/{website}', [WebsiteController::class, 'show'])->name('websites.show');
 
-    // ── Transactions ──────────────────────────────────────────
-    Route::resource('transactions', TransactionController::class)->except(['show']);
-    Route::get('transactions/{transaction}',        [TransactionController::class, 'show'])
-        ->name('transactions.show');
-    Route::get('api/customers/{customer}/balance',  [TransactionController::class, 'getBalance'])
-        ->name('api.customer.balance');
-
-    // ── Reports ───────────────────────────────────────────────
-    Route::prefix('reports')->name('reports.')->group(function () {
-        Route::get('balance-summary',        [ReportController::class, 'balanceSummary'])->name('balance-summary');
-        Route::get('balance-summary/export', [ReportController::class, 'exportBalanceSummary'])->name('balance-summary.export');
-        Route::get('date-range',             [ReportController::class, 'dateRange'])->name('date-range');
-        Route::get('customer-ledger',        [ReportController::class, 'customerLedger'])->name('customer-ledger');
-        Route::get('city-wise',              [ReportController::class, 'cityWise'])->name('city-wise');
-        Route::get('agent-wise',             [ReportController::class, 'agentWise'])->name('agent-wise');
-        Route::get('activity-logs',          [ReportController::class, 'activityLogs'])->name('activity-logs');
+    Route::middleware('role:admin,manager')->group(function () {
+        Route::post('/websites',            [WebsiteController::class, 'store'])->name('websites.store');
+        Route::put('/websites/{website}',   [WebsiteController::class, 'update'])->name('websites.update');
     });
 
-    // ── Masters ───────────────────────────────────────────────
-    Route::resource('agents', AgentController::class)->except(['show']);
-    Route::patch('agents/{agent}/toggle',
-        [AgentController::class, 'toggleStatus']
-    )->name('agents.toggle');
+    // ── Keywords (viewer: read | manager+: write | admin: delete) ─
+    Route::get('/keywords', [KeywordController::class, 'index'])->name('keywords.index');
 
-    // ── Users (super_admin only) ──────────────────────────────
-    Route::resource('users', UserController::class)->except(['show']);
+    Route::middleware('role:admin,manager')->group(function () {
+        Route::post('/keywords',           [KeywordController::class, 'store'])->name('keywords.store');
+        Route::put('/keywords/{keyword}',  [KeywordController::class, 'update'])->name('keywords.update');
+    });
 
-    // ── Profile ───────────────────────────────────────────────
-    Route::get('profile',                  [ProfileController::class, 'show'])->name('profile');
-    Route::put('profile',                  [ProfileController::class, 'update'])->name('profile.update');
-    Route::put('profile/change-password',  [ProfileController::class, 'changePassword'])->name('profile.password');
+    Route::delete('/keywords/{keyword}', [KeywordController::class, 'destroy'])
+        ->middleware('role:admin')
+        ->name('keywords.destroy');
 
+    // ── Rankings ─────────────────────────────────────────────────
+    Route::post('/rankings/refresh', [RankingsController::class, 'refresh'])
+        ->middleware('role:admin,manager')
+        ->name('rankings.refresh');
+
+    Route::get('/rankings/export', [RankingsController::class, 'export'])
+        ->name('rankings.export');
+
+    // ── Admin-only routes ────────────────────────────────────────
+    Route::middleware('role:admin')->group(function () {
+
+        // Audit log
+        Route::get('/audit', [AuditLogController::class, 'index'])->name('audit.index');
+
+        // User management
+        Route::get('/users',              [UserController::class, 'index'])->name('users.index');
+        Route::post('/users',             [UserController::class, 'store'])->name('users.store');
+        Route::put('/users/{user}',       [UserController::class, 'update'])->name('users.update');
+
+        // API settings
+        Route::get('/settings/api',       [ApiSettingsController::class, 'index'])->name('settings.api.index');
+        Route::put('/settings/api',       [ApiSettingsController::class, 'update'])->name('settings.api.update');
+        Route::get('/settings/api/test',  [ApiSettingsController::class, 'test'])->name('settings.api.test');
+    });
+
+    // ── Profile ──────────────────────────────────────────────────
+    Route::get('/profile', fn() => view('profile'))->name('profile');
 });

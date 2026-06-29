@@ -2,120 +2,71 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\User;
-use App\Models\Role;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
     public function index()
     {
-        $this->checkSuperAdmin();
-
-        $users = User::with('roles')->orderBy('name')->paginate(20);
+        $users = User::orderBy('name')->paginate(20);
         return view('users.index', compact('users'));
-    }
-
-    public function create()
-    {
-        $this->checkSuperAdmin();
-        $roles = Role::orderBy('display_name')->get();
-        return view('users.create', compact('roles'));
     }
 
     public function store(Request $request)
     {
-        $this->checkSuperAdmin();
-
         $data = $request->validate([
-            'name'     => 'required|string|max:100',
-            'username' => 'required|string|max:100|unique:users',
-            'email'    => 'required|email|max:150|unique:users',
-            'password' => 'required|string|min:8|confirmed',
-            'role_id'  => 'required|exists:roles,id',
+            'name'     => ['required', 'string', 'max:255'],
+            'email'    => ['required', 'email', 'unique:users,email'],
+            'role'     => ['required', 'in:admin,manager,viewer'],
+            'password' => ['nullable', Password::min(8)],
         ]);
 
-        $user = User::create([
-            'name'       => $data['name'],
-            'username'   => strtolower($data['username']),
-            'email'      => strtolower($data['email']),
-            'password'   => Hash::make($data['password']),
-            'is_active'  => true,
-        ]);
+        // Auto-generate a password if not provided
+        $plain    = $data['password'] ?? \Str::random(12);
+        $data['password']   = Hash::make($plain);
+        $data['is_active']  = true;
 
-        // Assign role
-        \DB::table('user_roles')->insert([
-            'user_id' => $user->id,
-            'role_id' => $data['role_id'],
-        ]);
+        $user = User::create($data);
 
-        return redirect()->route('users.index')
-            ->with('success', "User [{$user->name}] created successfully.");
-    }
+        ActivityLog::record(
+            userId:      auth()->id(),
+            action:      'user.invited',
+            modelType:   'User',
+            modelId:     $user->id,
+            description: "Invited user: {$user->name} ({$user->email}) as {$user->role}",
+            newValues:   $user->only(['name', 'email', 'role'])
+        );
 
-    public function edit(User $user)
-    {
-        $this->checkSuperAdmin();
-        $roles = Role::orderBy('display_name')->get();
-        return view('users.edit', compact('user', 'roles'));
+        // TODO: send welcome email with $plain password
+        // Mail::to($user->email)->send(new WelcomeMail($user, $plain));
+
+        return back()->with('success', "User \"{$user->name}\" invited. Temp password: {$plain}");
     }
 
     public function update(Request $request, User $user)
     {
-        $this->checkSuperAdmin();
-
         $data = $request->validate([
-            'name'      => 'required|string|max:100',
-            'email'     => 'required|email|max:150|unique:users,email,' . $user->id,
-            'role_id'   => 'required|exists:roles,id',
-            'is_active' => 'boolean',
-            'password'  => 'nullable|string|min:8|confirmed',
+            'role'      => ['sometimes', 'required', 'in:admin,manager,viewer'],
+            'is_active' => ['sometimes', 'boolean'],
         ]);
 
-        $updateData = [
-            'name'      => $data['name'],
-            'email'     => strtolower($data['email']),
-            'is_active' => $request->boolean('is_active'),
-        ];
+        $old = $user->only(array_keys($data));
+        $user->update($data);
 
-        if (!empty($data['password'])) {
-            $updateData['password'] = Hash::make($data['password']);
-        }
+        ActivityLog::record(
+            userId:      auth()->id(),
+            action:      'user.updated',
+            modelType:   'User',
+            modelId:     $user->id,
+            description: "Updated user: {$user->name}",
+            oldValues:   $old,
+            newValues:   $user->fresh()->only(array_keys($data))
+        );
 
-        $user->update($updateData);
-
-        // Update role
-        \DB::table('user_roles')->where('user_id', $user->id)->delete();
-        \DB::table('user_roles')->insert([
-            'user_id' => $user->id,
-            'role_id' => $data['role_id'],
-        ]);
-
-        return redirect()->route('users.index')
-            ->with('success', "User [{$user->name}] updated successfully.");
-    }
-
-    public function destroy(User $user)
-    {
-        $this->checkSuperAdmin();
-
-        if ($user->id === Auth::id()) {
-            return back()->with('error', 'You cannot delete your own account.');
-        }
-
-        $name = $user->name;
-        $user->delete();
-
-        return redirect()->route('users.index')
-            ->with('success', "User [{$name}] deleted.");
-    }
-
-    private function checkSuperAdmin(): void
-    {
-        if (! Auth::user()->isSuperAdmin()) {
-            abort(403, 'Only Super Admin can manage users.');
-        }
+        return back()->with('success', "User \"{$user->name}\" updated.");
     }
 }

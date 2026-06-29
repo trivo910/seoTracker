@@ -4,221 +4,205 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Dashboard') — Aman Traders</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <title>@yield('title', 'SEO Rank Tracker')</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root { --sidebar-width:240px; --sidebar-bg:#1a1f2e; --brand:#3b5bdb; }
-        body { background:#f4f6fb; font-family:'Segoe UI',sans-serif; font-size:14px; }
-
-        #sidebar {
-            position:fixed; top:0; left:0; bottom:0; width:var(--sidebar-width);
-            background:var(--sidebar-bg); z-index:1000; overflow-y:auto;
-            display:flex; flex-direction:column;
-        }
-        .sb-brand { padding:18px 20px 14px; border-bottom:1px solid rgba(255,255,255,.08); }
-        .sb-brand .b-name { color:#fff; font-size:16px; font-weight:600; display:block; }
-        .sb-brand .b-sub  { color:rgba(255,255,255,.4); font-size:11px; }
-        .sb-section { padding:16px 12px 4px; font-size:10px; font-weight:600; color:rgba(255,255,255,.3); letter-spacing:1px; text-transform:uppercase; }
-        .sb-nav .nav-link {
-            display:flex; align-items:center; gap:10px;
-            padding:9px 16px; margin:1px 8px; color:rgba(255,255,255,.65);
-            border-radius:7px; text-decoration:none; font-size:13px; transition:all .15s;
-        }
-        .sb-nav .nav-link:hover  { background:rgba(255,255,255,.07); color:#fff; }
-        .sb-nav .nav-link.active { background:var(--brand); color:#fff; }
-        .sb-nav .nav-link i      { font-size:15px; width:18px; text-align:center; }
-        .sb-footer {
-            padding:14px 16px; border-top:1px solid rgba(255,255,255,.08);
-            color:rgba(255,255,255,.4); font-size:11px; margin-top:auto;
-        }
-        .sb-footer strong { color:rgba(255,255,255,.75); display:block; }
-
-        #main { margin-left:var(--sidebar-width); min-height:100vh; }
-        #topbar {
-            height:56px; background:#fff; border-bottom:1px solid #e8ecf0;
-            display:flex; align-items:center; padding:0 24px; gap:16px;
-            position:sticky; top:0; z-index:100;
-        }
-        .topbar-title { font-size:16px; font-weight:600; color:#1a1f2e; }
-        .topbar-right  { margin-left:auto; display:flex; align-items:center; gap:12px; }
-        .user-pill {
-            display:flex; align-items:center; gap:8px; background:#f4f6fb;
-            border-radius:20px; padding:5px 12px 5px 5px; cursor:pointer;
-            border:1px solid #e8ecf0;
-        }
-        .user-avatar {
-            width:28px; height:28px; border-radius:50%; background:var(--brand);
-            color:#fff; font-size:11px; font-weight:600;
-            display:flex; align-items:center; justify-content:center;
-        }
-
-        .page-content { padding:24px; }
-        .card { border:1px solid #e8ecf0; border-radius:10px; box-shadow:none; }
-        .card-header { background:#fff; border-bottom:1px solid #e8ecf0; padding:14px 20px; font-weight:600; }
-
-        .stat-card { border-radius:10px; padding:20px; border:1px solid #e8ecf0; background:#fff; }
-        .stat-label { font-size:12px; color:#6c757d; margin-bottom:6px; }
-        .stat-value { font-size:22px; font-weight:700; }
-        .stat-icon  { width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; }
-
-        .table th { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.4px; color:#6c757d; border-bottom:2px solid #e8ecf0; background:#f9fafb; }
-        .table td { vertical-align:middle; font-size:13px; }
-
-        .badge-credit   { background:#d1fae5; color:#065f46; font-weight:500; }
-        .badge-debit    { background:#fee2e2; color:#991b1b; font-weight:500; }
-        .badge-active   { background:#dbeafe; color:#1e40af; }
-        .badge-inactive { background:#f3f4f6; color:#6b7280; }
-
-        .bal-pos { color:#059669; font-weight:600; }
-        .bal-neg { color:#dc2626; font-weight:600; }
-        .bal-zero{ color:#6b7280; }
-
-        .btn-primary { background:var(--brand); border-color:var(--brand); }
-        .btn-primary:hover { background:#2f4bbd; border-color:#2f4bbd; }
-
-        .flash-wrap { position:fixed; top:66px; right:20px; z-index:9999; min-width:300px; max-width:400px; }
-
-        @media(max-width:768px){ #sidebar{ transform:translateX(-100%); } #sidebar.open{ transform:translateX(0); } #main{ margin-left:0; } }
+        body { font-family: 'Inter', system-ui, sans-serif; }
     </style>
     @stack('styles')
 </head>
-<body>
+<body class="bg-gray-50 antialiased">
 
-<nav id="sidebar">
-    <div class="sb-brand">
-        <span class="b-name"><i class="bi bi-shop me-2"></i>Aman Traders</span>
-        <span class="b-sub">Ledger Management System</span>
-    </div>
+@php
+    /* Accepts one or more route patterns (wildcards supported via routeIs) */
+    $nav = fn(string ...$routes) =>
+        'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ' .
+        (request()->routeIs(...$routes)
+            ? 'bg-indigo-50 text-indigo-700 font-semibold'
+            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900');
+@endphp
 
-    <div class="sb-nav mt-1">
-        <div class="sb-section">Main</div>
-        <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
-            <i class="bi bi-speedometer2"></i> Dashboard
-        </a>
+<div class="flex h-screen overflow-hidden">
 
-        @if(auth()->user()->hasPermission('customers.view') || auth()->user()->isSuperAdmin())
-        <div class="sb-section">Customers</div>
-        <a href="{{ route('customers.index') }}" class="nav-link {{ request()->routeIs('customers.index','customers.show') ? 'active' : '' }}">
-            <i class="bi bi-people"></i> All Customers
-        </a>
-        @if(auth()->user()->hasPermission('customers.create') || auth()->user()->isSuperAdmin())
-        <a href="{{ route('customers.create') }}" class="nav-link {{ request()->routeIs('customers.create') ? 'active' : '' }}">
-            <i class="bi bi-person-plus"></i> Add Customer
-        </a>
-        @endif
-        @endif
+    {{-- ─── Sidebar ──────────────────────────────────────────── --}}
+    <aside class="w-52 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
 
-        @if(auth()->user()->hasPermission('transactions.view') || auth()->user()->isSuperAdmin())
-        <div class="sb-section">Transactions</div>
-        <a href="{{ route('transactions.index') }}" class="nav-link {{ request()->routeIs('transactions.index') ? 'active' : '' }}">
-            <i class="bi bi-arrow-left-right"></i> All Transactions
-        </a>
-        @if(auth()->user()->hasPermission('transactions.create') || auth()->user()->isSuperAdmin())
-        <a href="{{ route('transactions.create') }}" class="nav-link {{ request()->routeIs('transactions.create') ? 'active' : '' }}">
-            <i class="bi bi-plus-circle"></i> Add Entry
-        </a>
-        @endif
-        @endif
+        {{-- Logo --}}
+        <div class="flex items-center gap-2.5 px-4 py-4 border-b border-gray-100">
+            <div class="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                </svg>
+            </div>
+            <span class="text-sm font-semibold text-gray-800 leading-tight">SEO Rank Tracker</span>
+        </div>
 
-        @if(auth()->user()->hasPermission('reports.view') || auth()->user()->isSuperAdmin())
-        <div class="sb-section">Reports</div>
-        <a href="{{ route('reports.balance-summary') }}"  class="nav-link {{ request()->routeIs('reports.balance-summary') ? 'active' : '' }}"><i class="bi bi-bar-chart-line"></i> Balance Summary</a>
-        <a href="{{ route('reports.date-range') }}"       class="nav-link {{ request()->routeIs('reports.date-range') ? 'active' : '' }}"><i class="bi bi-calendar-range"></i> Date Range</a>
-        <a href="{{ route('reports.customer-ledger') }}"  class="nav-link {{ request()->routeIs('reports.customer-ledger') ? 'active' : '' }}"><i class="bi bi-journal-text"></i> Customer Ledger</a>
-        <a href="{{ route('reports.city-wise') }}"        class="nav-link {{ request()->routeIs('reports.city-wise') ? 'active' : '' }}"><i class="bi bi-geo-alt"></i> City Wise</a>
-        <a href="{{ route('reports.agent-wise') }}"       class="nav-link {{ request()->routeIs('reports.agent-wise') ? 'active' : '' }}"><i class="bi bi-person-badge"></i> Agent Wise</a>
-        @endif
+        {{-- Navigation --}}
+        <nav class="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
 
-        @if(auth()->user()->hasPermission('masters.manage') || auth()->user()->isSuperAdmin())
-        <div class="sb-section">Masters</div>
-        <a href="{{ route('agents.index') }}" class="nav-link {{ request()->routeIs('agents.*') ? 'active' : '' }}">
-            <i class="bi bi-person-badge"></i> Agents
-        </a>
-        @endif
+            <a href="{{ route('dashboard') }}" class="{{ $nav('dashboard', 'websites.*') }}">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                </svg>
+                Dashboard
+            </a>
 
-        @if(auth()->user()->hasPermission('logs.view') || auth()->user()->isSuperAdmin())
-        <div class="sb-section">System</div>
-        <a href="{{ route('reports.activity-logs') }}" class="nav-link {{ request()->routeIs('reports.activity-logs') ? 'active' : '' }}">
-            <i class="bi bi-clock-history"></i> Activity Logs
-        </a>
-        @endif
+            <a href="{{ route('keywords.index') }}" class="{{ $nav('keywords.*', 'rankings.*') }}">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
+                Keywords
+            </a>
 
-        <!-- @if(auth()->user()->isSuperAdmin())
-        <a href="{{ route('users.index') }}" class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}">
-            <i class="bi bi-shield-lock"></i> Users & Roles
-        </a>
-        @endif -->
-    </div>
-
-    <div class="sb-footer">
-        Logged in as<br>
-        <strong>{{ auth()->user()->name }}</strong>
-        <span style="font-size:10px;color:rgba(255,255,255,.3);">{{ auth()->user()->role_name }}</span>
-    </div>
-</nav>
-
-<div id="main">
-    <div id="topbar">
-        <button class="btn btn-sm d-md-none border-0 p-1" onclick="document.getElementById('sidebar').classList.toggle('open')">
-            <i class="bi bi-list fs-4"></i>
-        </button>
-        <span class="topbar-title">@yield('page-title','Dashboard')</span>
-        <div class="topbar-right">
-            @if(auth()->user()->hasPermission('transactions.create') || auth()->user()->isSuperAdmin())
-            <a href="{{ route('transactions.create') }}" class="btn btn-primary btn-sm">
-                <i class="bi bi-plus-lg me-1"></i>Add Entry
+            @if(auth()->user()->can('viewAuditLog'))
+            <a href="{{ route('audit.index') }}" class="{{ $nav('audit.*') }}">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+                </svg>
+                Audit log
             </a>
             @endif
-            <div class="dropdown">
-                <div class="user-pill" data-bs-toggle="dropdown">
-                    <div class="user-avatar">{{ strtoupper(substr(auth()->user()->name,0,2)) }}</div>
-                    <span style="font-size:13px;">{{ auth()->user()->name }}</span>
-                    <i class="bi bi-chevron-down" style="font-size:10px;color:#6c757d;"></i>
-                </div>
-                <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size:13px;min-width:180px;">
-                    <li><span class="dropdown-item-text text-muted" style="font-size:11px;">{{ auth()->user()->role_name }}</span></li>
-                    <li><hr class="dropdown-divider my-1"></li>
-                    <li><a class="dropdown-item" href="{{ route('profile') }}"><i class="bi bi-person me-2"></i>Profile</a></li>
-                    <li>
-                        <form action="{{ route('logout') }}" method="POST">
-                            @csrf
-                            <button class="dropdown-item text-danger"><i class="bi bi-box-arrow-right me-2"></i>Logout</button>
-                        </form>
-                    </li>
-                </ul>
+
+            {{-- Admin section --}}
+            @if(auth()->user()->can('apiSettings') || auth()->user()->can('manageUsers'))
+            <div class="pt-3 pb-1">
+                <p class="px-3 text-xs font-medium text-gray-400 uppercase tracking-wider">Admin</p>
             </div>
-        </div>
-    </div>
 
-    <div class="flash-wrap">
+            @if(auth()->user()->can('apiSettings'))
+            <a href="{{ route('settings.api.index') }}" class="{{ $nav('settings.*') }}">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                API settings
+            </a>
+            @endif
+
+            @if(auth()->user()->can('manageUsers'))
+            <a href="{{ route('users.index') }}" class="{{ $nav('users.*') }}">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                </svg>
+                Users
+            </a>
+            @endif
+            @endif
+
+            {{-- Divider --}}
+            <div class="pt-3 pb-1 border-t border-gray-100 mt-1"></div>
+
+            <a href="{{ route('rankings.export') }}" class="{{ $nav('rankings.export') }}">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg>
+                Export Excel
+            </a>
+
+            <a href="{{ route('profile') }}" class="{{ $nav('profile') }}">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                </svg>
+                My Profile
+            </a>
+
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <button type="submit"
+                    class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-gray-600 hover:bg-red-50 hover:text-red-700">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+                    </svg>
+                    Logout
+                </button>
+            </form>
+
+        </nav>
+    </aside>
+
+    {{-- ─── Main content ─────────────────────────────────────── --}}
+    <div class="flex-1 flex flex-col overflow-hidden">
+
+        {{-- Top bar --}}
+        <header class="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between flex-shrink-0">
+            <h1 class="text-base font-semibold text-gray-800">@yield('page-title', 'Dashboard')</h1>
+
+            <div class="flex items-center gap-3">
+                <a href="{{ route('profile') }}" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                    <div class="text-right">
+                        <p class="text-sm font-medium text-gray-700 leading-tight">{{ auth()->user()->name }}</p>
+                        @php
+                            $roleBadge = match(auth()->user()->role) {
+                                'admin'   => 'bg-purple-100 text-purple-700',
+                                'manager' => 'bg-blue-100 text-blue-700',
+                                default   => 'bg-gray-100 text-gray-600',
+                            };
+                        @endphp
+                        <span class="text-xs font-medium px-1.5 py-0.5 rounded {{ $roleBadge }}">
+                            {{ ucfirst(auth()->user()->role) }}
+                        </span>
+                    </div>
+                    @php
+                        $avatarColor = match(auth()->user()->avatarColor) {
+                            'blue'   => 'bg-blue-500',
+                            'green'  => 'bg-emerald-500',
+                            'amber'  => 'bg-amber-500',
+                            'purple' => 'bg-violet-500',
+                            default  => 'bg-indigo-500',
+                        };
+                    @endphp
+                    <div class="w-9 h-9 rounded-full {{ $avatarColor }} flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
+                        {{ auth()->user()->initials }}
+                    </div>
+                </a>
+            </div>
+        </header>
+
+        {{-- Flash messages --}}
         @if(session('success'))
-        <div class="alert alert-success alert-dismissible shadow-sm d-flex gap-2 align-items-start">
-            <i class="bi bi-check-circle-fill mt-1"></i><div>{{ session('success') }}</div>
-            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+        <div class="mx-6 mt-4 flex items-center gap-3 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg text-sm" id="flash-success">
+            <svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {{ session('success') }}
         </div>
         @endif
-        @if(session('error'))
-        <div class="alert alert-danger alert-dismissible shadow-sm d-flex gap-2 align-items-start">
-            <i class="bi bi-exclamation-circle-fill mt-1"></i><div>{{ session('error') }}</div>
-            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
-        </div>
-        @endif
-    </div>
 
-    <div class="page-content">
-        @yield('content')
+        @if(session('error'))
+        <div class="mx-6 mt-4 flex items-center gap-3 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm">
+            <svg class="w-4 h-4 text-red-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+            </svg>
+            {{ session('error') }}
+        </div>
+        @endif
+
+        {{-- Page content --}}
+        <main class="flex-1 overflow-y-auto p-6">
+            @yield('content')
+        </main>
+
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded',()=>{
-    setTimeout(()=>{ document.querySelectorAll('.flash-wrap .alert').forEach(a=>new bootstrap.Alert(a).close()); },4500);
-});
-function inr(n){ return '₹'+Number(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+    setTimeout(() => {
+        const el = document.getElementById('flash-success');
+        if (el) el.style.display = 'none';
+    }, 4000);
 </script>
+
 @stack('scripts')
 </body>
 </html>

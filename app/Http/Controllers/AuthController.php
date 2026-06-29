@@ -2,75 +2,66 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\LoginLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Services\ActivityLogger;
+use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    // ── Show login form ───────────────────────────────────────
     public function showLogin()
     {
-        if (Auth::check()) {
-            return redirect()->route('dashboard');
-        }
         return view('auth.login');
     }
 
-    // ── Handle login ──────────────────────────────────────────
     public function login(Request $request)
     {
-        $request->validate([
-            'email'    => 'required|email',
-            'password' => 'required|min:6',
-        ], [
-            'email.required'    => 'Email is required.',
-            'password.required' => 'Password is required.',
+        $credentials = $request->validate([
+            'email'    => ['required', 'email'],
+            'password' => ['required'],
         ]);
 
-        $credentials = $request->only('email', 'password');
-        $remember    = $request->boolean('remember');
+        $attempted = Auth::attempt($credentials, $request->boolean('remember'));
 
-        // Check if user is active before attempting login
-        $user = \App\Models\User::where('email', $request->email)->first();
+        // Log the attempt regardless of outcome
+        LoginLog::create([
+            'user_id'        => $attempted ? Auth::id() : null,
+            'email'          => $request->email,
+            'status'         => $attempted ? 'success' : 'failed',
+            'failure_reason' => $attempted ? null : 'Invalid credentials',
+            'ip_address'     => $request->ip(),
+            'user_agent'     => $request->userAgent(),
+        ]);
 
-        if ($user && ! $user->is_active) {
-            ActivityLogger::loginFailed($request->email);
-            return back()->withErrors(['email' => 'Your account has been deactivated. Contact admin.']);
+        if (! $attempted) {
+            throw ValidationException::withMessages([
+                'email' => 'These credentials do not match our records.',
+            ]);
         }
 
-        if (Auth::attempt($credentials, $remember)) {
-            $request->session()->regenerate();
-
-            // Update last login timestamp
-            Auth::user()->update(['last_login_at' => now()]);
-
-            // Log successful login
-            ActivityLogger::loginSuccess(Auth::id(), $request->email);
-
-            return redirect()->intended(route('dashboard'));
-        }
-
-        // Log failed attempt
-        ActivityLogger::loginFailed($request->email);
-
-        return back()
-            ->withErrors(['email' => 'Invalid email or password.'])
-            ->withInput($request->only('email'));
-    }
-
-    // ── Handle logout ─────────────────────────────────────────
-    public function logout(Request $request)
-    {
         $user = Auth::user();
 
-        ActivityLogger::logout($user->id, $user->email);
+        // Block inactive accounts
+        if (! $user->is_active) {
+            Auth::logout();
+            throw ValidationException::withMessages([
+                'email' => 'Your account has been deactivated. Contact an administrator.',
+            ]);
+        }
 
+        // Update last login timestamp
+        $user->recordLogin($request->ip(), $request->userAgent());
+
+        $request->session()->regenerate();
+
+        return redirect()->intended(route('dashboard'));
+    }
+
+    public function logout(Request $request)
+    {
         Auth::logout();
-
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-
-        return redirect()->route('login')->with('success', 'You have been logged out successfully.');
+        return redirect()->route('login');
     }
 }

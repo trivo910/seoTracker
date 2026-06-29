@@ -1,60 +1,74 @@
 <?php
-// ═══════════════════════════════════════════════════════════
-// app/Models/User.php
-// ═══════════════════════════════════════════════════════════
+
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use App\Traits\LogsActivity;
 
 class User extends Authenticatable
 {
-    use Notifiable, LogsActivity;
+    use HasFactory, Notifiable;
 
-    protected $fillable = ['name', 'username', 'email', 'password', 'is_active'];
+    protected $fillable = [
+        'name', 'email', 'password', 'role', 'is_active',
+        'last_login_at', 'last_login_ip', 'login_count',
+    ];
 
     protected $hidden = ['password', 'remember_token'];
 
     protected $casts = [
-        'is_active'     => 'boolean',
-        'last_login_at' => 'datetime',
+        'email_verified_at' => 'datetime',
+        'last_login_at'     => 'datetime',
+        'is_active'         => 'boolean',
+        'password'          => 'hashed',
     ];
 
-    // ── Relationships ─────────────────────────────────────────
-    public function roles()
+    // ─── Roles ───────────────────────────────────────────────
+    public function isAdmin(): bool   { return $this->role === 'admin'; }
+    public function isManager(): bool { return in_array($this->role, ['admin', 'manager']); }
+    public function isViewer(): bool  { return $this->role === 'viewer'; }
+
+    public function can($ability, $arguments = []): bool
     {
-        return $this->belongsToMany(Role::class, 'user_roles');
+        return match($ability) {
+            'admin'          => $this->isAdmin(),
+            'addKeyword'     => $this->isManager(),
+            'editKeyword'    => $this->isManager(),
+            'deleteKeyword'  => $this->isAdmin(),
+            'viewAuditLog'   => $this->isAdmin(),
+            'manageUsers'    => $this->isAdmin(),
+            'apiSettings'    => $this->isAdmin(),
+            default          => false,
+        };
     }
 
-    public function loginLogs()
+    // ─── Relationships ────────────────────────────────────────
+    public function keywords()    { return $this->hasMany(Keyword::class, 'created_by'); }
+    public function activityLogs(){ return $this->hasMany(ActivityLog::class); }
+    public function loginLogs()   { return $this->hasMany(LoginLog::class); }
+
+    // ─── Helpers ─────────────────────────────────────────────
+    public function getInitialsAttribute(): string
     {
-        return $this->hasMany(LoginLog::class);
+        return collect(explode(' ', $this->name))
+            ->map(fn($w) => strtoupper(substr($w, 0, 1)))
+            ->take(2)
+            ->implode('');
     }
 
-    public function activityLogs()
+    public function getAvatarColorAttribute(): string
     {
-        return $this->hasMany(ActivityLog::class);
+        $colors = ['blue', 'green', 'amber', 'purple'];
+        return $colors[crc32($this->name) % count($colors)];
     }
 
-    // ── Helpers ───────────────────────────────────────────────
-    public function hasRole(string $role): bool
+    public function recordLogin(string $ip, string $ua): void
     {
-        return $this->roles->contains('name', $role);
-    }
-
-    public function hasPermission(string $permission): bool
-    {
-        return $this->roles->flatMap->permissions->contains('name', $permission);
-    }
-
-    public function isSuperAdmin(): bool
-    {
-        return $this->hasRole('super_admin');
-    }
-
-    public function getRoleNameAttribute(): string
-    {
-        return $this->roles->first()?->display_name ?? 'No Role';
+        $this->update([
+            'last_login_at'  => now(),
+            'last_login_ip'  => $ip,
+            'login_count'    => $this->login_count + 1,
+        ]);
     }
 }
