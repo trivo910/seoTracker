@@ -309,7 +309,7 @@
                             class="w-full px-3.5 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                         <option value="">— Select website —</option>
                         @foreach($websites as $site)
-                        <option value="{{ $site->id }}" {{ request('website_id') == $site->id ? 'selected' : '' }}>
+                        <option value="{{ $site->id }}" {{ old('website_id', request('website_id')) == $site->id ? 'selected' : '' }}>
                             {{ $site->name }} ({{ $site->domain }})
                         </option>
                         @endforeach
@@ -320,12 +320,20 @@
                 <div class="col-span-2">
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Keyword <span class="text-red-500">*</span></label>
                     <input type="text" name="keyword" required placeholder="e.g. mumbai darshan bus"
-                           class="w-full px-3.5 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                           value="{{ old('keyword') }}"
+                           class="w-full px-3.5 py-2.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent @error('keyword') border-red-400 focus:ring-red-200 @else border-gray-300 focus:ring-indigo-500 @enderror">
+                    @error('keyword')
+                    <p class="mt-1.5 text-xs text-red-600 flex items-center gap-1">
+                        <svg class="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                        {{ $message }}
+                    </p>
+                    @enderror
                 </div>
 
                 <div class="col-span-2">
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Target URL <span class="text-red-500">*</span></label>
                     <input type="text" name="target_url" required placeholder="https://example.com/page"
+                           value="{{ old('target_url') }}"
                            class="w-full px-3.5 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                 </div>
 
@@ -543,6 +551,18 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.add-intent-check, .edit-intent-check').forEach(cb => {
         cb.addEventListener('change', function () { setIntentPill(this); });
     });
+
+    @if($errors->has('keyword'))
+    // Reopen Add modal and restore intent pills after failed validation
+    document.getElementById('add-modal').classList.remove('hidden');
+    @if(old('intent'))
+    const oldIntent = @json(old('intent', []));
+    document.querySelectorAll('#add-intent-group .add-intent-check').forEach(cb => {
+        cb.checked = oldIntent.includes(cb.value);
+        setIntentPill(cb);
+    });
+    @endif
+    @endif
 });
 
 document.addEventListener('keydown', e => {

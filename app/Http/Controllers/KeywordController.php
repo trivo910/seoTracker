@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\Keyword;
 use App\Models\Website;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class KeywordController extends Controller
 {
@@ -31,7 +32,11 @@ class KeywordController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'keyword'          => ['required', 'string', 'max:255'],
+            'keyword'          => [
+                'required', 'string', 'max:255',
+                Rule::unique('keywords', 'keyword')
+                    ->where('website_id', $request->input('website_id')),
+            ],
             'target_url'       => ['required', 'string', 'max:500'],
             'website_id'       => ['nullable', 'exists:websites,id'],
             'monthly_searches' => ['nullable', 'integer', 'min:0'],
@@ -64,7 +69,12 @@ class KeywordController extends Controller
     public function update(Request $request, Keyword $keyword)
     {
         $data = $request->validate([
-            'keyword'          => ['sometimes', 'required', 'string', 'max:255'],
+            'keyword'          => [
+                'sometimes', 'required', 'string', 'max:255',
+                Rule::unique('keywords', 'keyword')
+                    ->where('website_id', $keyword->website_id)
+                    ->ignore($keyword->id),
+            ],
             'target_url'       => ['sometimes', 'required', 'string', 'max:500'],
             'monthly_searches' => ['nullable', 'integer', 'min:0'],
             'semrush_volume'   => ['nullable', 'integer', 'min:0'],
