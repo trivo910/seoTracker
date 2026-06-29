@@ -38,10 +38,12 @@ class KeywordController extends Controller
             'semrush_volume'   => ['nullable', 'integer', 'min:0'],
             'kd'               => ['nullable', 'integer', 'min:0', 'max:100'],
             'competition'      => ['nullable', 'in:Low,Medium,High'],
-            'intent'           => ['nullable', 'in:I,T,N,C'],
+            'intent'           => ['nullable', 'array'],
+            'intent.*'         => ['in:I,T,N,C'],
             'currency'         => ['nullable', 'string', 'max:10'],
         ]);
 
+        $data['intent']     = implode(',', array_filter($data['intent'] ?? [])) ?: null;
         $data['created_by'] = auth()->id();
         $data['updated_by'] = auth()->id();
 
@@ -68,8 +70,11 @@ class KeywordController extends Controller
             'semrush_volume'   => ['nullable', 'integer', 'min:0'],
             'kd'               => ['nullable', 'integer', 'min:0', 'max:100'],
             'competition'      => ['nullable', 'in:Low,Medium,High'],
-            'intent'           => ['nullable', 'in:I,T,N,C'],
+            'intent'           => ['nullable', 'array'],
+            'intent.*'         => ['in:I,T,N,C'],
         ]);
+
+        $data['intent'] = implode(',', array_filter($data['intent'] ?? [])) ?: null;
 
         $old = $keyword->only(array_keys($data));
         $data['updated_by'] = auth()->id();

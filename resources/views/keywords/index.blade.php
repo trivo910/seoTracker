@@ -114,13 +114,13 @@
                         default  => 'bg-gray-100 text-gray-500',
                     };
 
-                    $intentLabel = match($kw->intent) {
+                    $intentColors = [
                         'I' => ['Informational', 'bg-blue-100 text-blue-700'],
                         'T' => ['Transactional', 'bg-purple-100 text-purple-700'],
                         'N' => ['Navigational', 'bg-gray-100 text-gray-600'],
                         'C' => ['Commercial', 'bg-orange-100 text-orange-700'],
-                        default => [null, ''],
-                    };
+                    ];
+                    $intents = $kw->intent ? array_filter(explode(',', $kw->intent)) : [];
                 @endphp
                 <tr class="hover:bg-gray-50 transition-colors">
                     <td class="px-4 py-3 text-gray-400 text-xs">{{ $keywords->firstItem() + $i }}</td>
@@ -177,11 +177,15 @@
 
                     {{-- Intent --}}
                     <td class="px-4 py-3 text-center">
-                        @if($intentLabel[0])
-                        <span class="text-xs px-2 py-0.5 rounded-full font-medium {{ $intentLabel[1] }}"
-                              title="{{ $intentLabel[0] }}">
-                            {{ $kw->intent }}
-                        </span>
+                        @if(count($intents))
+                        <div class="flex flex-wrap gap-1 justify-center">
+                            @foreach($intents as $intentCode)
+                            @if(isset($intentColors[$intentCode]))
+                            <span class="text-xs px-2 py-0.5 rounded-full font-medium {{ $intentColors[$intentCode][1] }}"
+                                  title="{{ $intentColors[$intentCode][0] }}">{{ $intentCode }}</span>
+                            @endif
+                            @endforeach
+                        </div>
                         @else
                         <span class="text-gray-300 text-xs">—</span>
                         @endif
@@ -349,21 +353,23 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Intent</label>
-                    <select name="intent"
-                            class="w-full px-3.5 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                        <option value="">— Select —</option>
-                        <option value="I">I — Informational</option>
-                        <option value="T">T — Transactional</option>
-                        <option value="N">N — Navigational</option>
-                        <option value="C">C — Commercial</option>
-                    </select>
-                </div>
-
-                <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">KD (Keyword Difficulty)</label>
                     <input type="number" name="kd" min="0" max="100" placeholder="18"
                            class="w-full px-3.5 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                </div>
+
+                <div class="col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Intent</label>
+                    <div id="add-intent-group" class="flex flex-wrap gap-2">
+                        @foreach(['I' => 'Informational', 'T' => 'Transactional', 'N' => 'Navigational', 'C' => 'Commercial'] as $val => $label)
+                        <label class="cursor-pointer">
+                            <input type="checkbox" name="intent[]" value="{{ $val }}" class="sr-only add-intent-check">
+                            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium border border-gray-200 text-gray-500 hover:border-indigo-300 transition-colors select-none">
+                                {{ $val }} — {{ $label }}
+                            </span>
+                        </label>
+                        @endforeach
+                    </div>
                 </div>
 
                 <div>
@@ -448,21 +454,23 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Intent</label>
-                    <select id="edit-intent" name="intent"
-                            class="w-full px-3.5 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                        <option value="">— Select —</option>
-                        <option value="I">I — Informational</option>
-                        <option value="T">T — Transactional</option>
-                        <option value="N">N — Navigational</option>
-                        <option value="C">C — Commercial</option>
-                    </select>
-                </div>
-
-                <div class="col-span-2">
                     <label class="block text-sm font-medium text-gray-700 mb-1.5">KD (Keyword Difficulty)</label>
                     <input type="number" id="edit-kd" name="kd" min="0" max="100"
                            class="w-full px-3.5 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                </div>
+
+                <div class="col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Intent</label>
+                    <div id="edit-intent-group" class="flex flex-wrap gap-2">
+                        @foreach(['I' => 'Informational', 'T' => 'Transactional', 'N' => 'Navigational', 'C' => 'Commercial'] as $val => $label)
+                        <label class="cursor-pointer">
+                            <input type="checkbox" name="intent[]" value="{{ $val }}" class="sr-only edit-intent-check">
+                            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium border border-gray-200 text-gray-500 hover:border-indigo-300 transition-colors select-none">
+                                {{ $val }} — {{ $label }}
+                            </span>
+                        </label>
+                        @endforeach
+                    </div>
                 </div>
             </div>
 
@@ -487,10 +495,26 @@
 <script>
 const activeWebsiteId = '{{ request('website_id') }}';
 
+function setIntentPill(cb) {
+    const pill = cb.nextElementSibling;
+    if (cb.checked) {
+        pill.classList.add('bg-indigo-100', 'text-indigo-700', 'border-indigo-300');
+        pill.classList.remove('text-gray-500', 'border-gray-200');
+    } else {
+        pill.classList.remove('bg-indigo-100', 'text-indigo-700', 'border-indigo-300');
+        pill.classList.add('text-gray-500', 'border-gray-200');
+    }
+}
+
 function openAddModal() {
-    // Pre-select website if a filter is active
     const sel = document.getElementById('add-website-id');
     if (sel && activeWebsiteId) sel.value = activeWebsiteId;
+
+    document.querySelectorAll('#add-intent-group .add-intent-check').forEach(cb => {
+        cb.checked = false;
+        setIntentPill(cb);
+    });
+
     document.getElementById('add-modal').classList.remove('hidden');
 }
 
@@ -506,11 +530,20 @@ function openEditModal(id, keyword, url, monthly, volume, competition, intent, k
     const compSel = document.getElementById('edit-competition');
     for (let o of compSel.options) o.selected = o.value === competition;
 
-    const intentSel = document.getElementById('edit-intent');
-    for (let o of intentSel.options) o.selected = o.value === intent;
+    const intentArr = intent ? intent.split(',') : [];
+    document.querySelectorAll('#edit-intent-group .edit-intent-check').forEach(cb => {
+        cb.checked = intentArr.includes(cb.value);
+        setIntentPill(cb);
+    });
 
     document.getElementById('edit-modal').classList.remove('hidden');
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.add-intent-check, .edit-intent-check').forEach(cb => {
+        cb.addEventListener('change', function () { setIntentPill(this); });
+    });
+});
 
 document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
