@@ -5,6 +5,7 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\KeywordController;
+use App\Http\Controllers\LogViewerController;
 use App\Http\Controllers\RankingsController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WebsiteController;
@@ -67,6 +68,9 @@ Route::middleware(['auth'])->group(function () {
 
         // Audit log
         Route::get('/audit', [AuditLogController::class, 'index'])->name('audit.index');
+
+        // Job logs viewer
+        Route::get('/logs', [LogViewerController::class, 'index'])->name('logs.index');
 
         // User management
         Route::get('/users',              [UserController::class, 'index'])->name('users.index');

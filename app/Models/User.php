@@ -37,6 +37,7 @@ class User extends Authenticatable
             'editKeyword'    => $this->isManager(),
             'deleteKeyword'  => $this->isAdmin(),
             'viewAuditLog'   => $this->isAdmin(),
+            'viewLogs'       => $this->isAdmin(),
             'manageUsers'    => $this->isAdmin(),
             'apiSettings'    => $this->isAdmin(),
             default          => false,
