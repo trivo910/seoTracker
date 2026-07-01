@@ -66,7 +66,7 @@ Route::middleware(['auth'])->group(function () {
     // ── Admin-only routes ────────────────────────────────────────
     Route::middleware('role:admin')->group(function () {
 
-        // Audit log
+        // Audit log 
         Route::get('/audit', [AuditLogController::class, 'index'])->name('audit.index');
 
         // Job logs viewer
