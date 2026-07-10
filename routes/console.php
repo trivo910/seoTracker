@@ -19,11 +19,17 @@ use Illuminate\Support\Facades\Schedule;
 | Or run manually anytime:
 |   php artisan ranks:check
 |
+0 or 7 = Sunday
+1 = Monday
+2 = Tuesday
+3 = Wednesday
+4 = Thursday
+5 = Friday
 */
 
 Schedule::job(new RankCheckJob())
     // ->dailyAt(config('serp.schedule_time', '01:00'))
-    ->weeklyOn(3, config('serp.schedule_time', '01:00'))
+    ->weeklyOn(5, config('serp.schedule_time', '01:00'))
     ->withoutOverlapping()
     ->onOneServer()
     ->name('daily-rank-check')
