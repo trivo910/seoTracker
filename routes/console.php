@@ -29,7 +29,7 @@ use Illuminate\Support\Facades\Schedule;
 
 Schedule::job(new RankCheckJob())
     // ->dailyAt(config('serp.schedule_time', '01:00'))
-    ->weeklyOn(5, config('serp.schedule_time', '12:25'))
+    ->weeklyOn(5, config('serp.schedule_time', '12:35'))
     ->withoutOverlapping()
     ->onOneServer()
     ->name('daily-rank-check')
