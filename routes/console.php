@@ -31,6 +31,6 @@ Schedule::job(new RankCheckJob())
     // ->dailyAt(config('serp.schedule_time', '01:00'))
     ->weeklyOn(5, config('serp.schedule_time', '12:50'))
     ->withoutOverlapping()
-    ->onOneServer()
+    ->onOneServer() 
     ->name('daily-rank-check')
     ->description('Check Google rankings for all active keywords');
