@@ -17,63 +17,80 @@ class SerperProvider implements SerpProviderInterface
 
     public function getRank(string $keyword, string $targetUrl, string $country = 'in'): ?int
     {
-        $log = Log::channel('jobs');
+        $log          = Log::channel('jobs');
+        $targetDomain = $this->extractDomain($targetUrl);
+
+        // Serper caps organic results at ~10 per call regardless of `num`, so
+        // paginate via `page` to cover positions up to 100, stopping as soon
+        // as a match is found or a short page shows there's nothing further.
+        $perPage  = 10;
+        $maxPages = 10;
 
         try {
-            $log->debug('Serper API → request', [
-                'keyword' => $keyword,
-                'country' => $country,
-                'num'     => 100,
-                'url'     => "{$this->baseUrl}/search",
-            ]);
-
-            $response = Http::withHeaders([
-                'X-API-KEY'    => $this->apiKey,
-                'Content-Type' => 'application/json',
-            ])->post("{$this->baseUrl}/search", [
-                'q'   => $keyword,
-                'gl'  => $country,
-                'hl'  => 'en',
-                'num' => 100,
-            ]);
-
-            if (! $response->successful()) {
-                $log->error('Serper API → error response', [
+            for ($page = 1; $page <= $maxPages; $page++) {
+                $log->debug('Serper API → request', [
                     'keyword' => $keyword,
-                    'status'  => $response->status(),
-                    'body'    => $response->body(),
+                    'country' => $country,
+                    'page'    => $page,
+                    'url'     => "{$this->baseUrl}/search",
                 ]);
-                return null;
-            }
 
-            $results      = $response->json('organic') ?? [];
-            $targetDomain = $this->extractDomain($targetUrl);
-            $credits      = $response->header('X-RateLimit-Remaining');
+                $response = Http::withHeaders([
+                    'X-API-KEY'    => $this->apiKey,
+                    'Content-Type' => 'application/json',
+                ])->post("{$this->baseUrl}/search", [
+                    'q'    => $keyword,
+                    'gl'   => $country,
+                    'hl'   => 'en',
+                    'num'  => $perPage,
+                    'page' => $page,
+                ]);
 
-            $log->debug('Serper API → response received', [
-                'keyword'        => $keyword,
-                'http_status'    => $response->status(),
-                'organic_count'  => count($results),
-                'target_domain'  => $targetDomain,
-                'credits_left'   => $credits,
-            ]);
-
-            foreach ($results as $result) {
-                if ($this->matches($this->extractDomain($result['link'] ?? ''), $targetDomain)) {
-                    $log->debug('Serper API → match found', [
-                        'keyword'     => $keyword,
-                        'rank'        => $result['position'],
-                        'matched_url' => $result['link'] ?? '',
-                        'title'       => $result['title'] ?? '',
+                if (! $response->successful()) {
+                    $log->error('Serper API → error response', [
+                        'keyword' => $keyword,
+                        'page'    => $page,
+                        'status'  => $response->status(),
+                        'body'    => $response->body(),
                     ]);
-                    return $result['position'];
+                    return null;
+                }
+
+                $results = $response->json('organic') ?? [];
+                $credits = $response->header('X-RateLimit-Remaining');
+
+                $log->debug('Serper API → response received', [
+                    'keyword'       => $keyword,
+                    'page'          => $page,
+                    'http_status'   => $response->status(),
+                    'organic_count' => count($results),
+                    'target_domain' => $targetDomain,
+                    'credits_left'  => $credits,
+                ]);
+
+                foreach ($results as $result) {
+                    if ($this->matches($this->extractDomain($result['link'] ?? ''), $targetDomain)) {
+                        $log->debug('Serper API → match found', [
+                            'keyword'     => $keyword,
+                            'page'        => $page,
+                            'rank'        => $result['position'],
+                            'matched_url' => $result['link'] ?? '',
+                            'title'       => $result['title'] ?? '',
+                        ]);
+                        return $result['position'];
+                    }
+                }
+
+                // Short page (fewer results than requested) means Google has
+                // nothing further to show — no point paginating any deeper.
+                if (count($results) < $perPage) {
+                    break;
                 }
             }
 
             $log->debug('Serper API → no match in results', [
                 'keyword'       => $keyword,
                 'target_domain' => $targetDomain,
-                'results_shown' => count($results),
             ]);
 
             return null;
