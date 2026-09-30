@@ -120,11 +120,13 @@ class SerperProvider implements SerpProviderInterface
 
     private function extractDomain(string $url): string
     {
-        return strtolower(ltrim(parse_url($url, PHP_URL_HOST) ?? $url, 'www.'));
+        $domain = strtolower(parse_url($url, PHP_URL_HOST) ?? $url);
+
+        return str_starts_with($domain, 'www.') ? substr($domain, 4) : $domain;
     }
 
     private function matches(string $a, string $b): bool
     {
-        return str_contains($a, $b) || str_contains($b, $a);
+        return $a === $b || str_ends_with($a, '.'.$b);
     }
 }
