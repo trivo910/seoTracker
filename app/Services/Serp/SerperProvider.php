@@ -25,6 +25,7 @@ class SerperProvider implements SerpProviderInterface
         // as a match is found or a short page shows there's nothing further.
         $perPage  = 10;
         $maxPages = 10;
+        $resultsSeen = 0;
 
         try {
             for ($page = 1; $page <= $maxPages; $page++) {
@@ -68,18 +69,21 @@ class SerperProvider implements SerpProviderInterface
                     'credits_left'  => $credits,
                 ]);
 
-                foreach ($results as $result) {
+                foreach ($results as $index => $result) {
                     if ($this->matches($this->extractDomain($result['link'] ?? ''), $targetDomain)) {
+                        $rank = $resultsSeen + $index + 1;
                         $log->debug('Serper API → match found', [
                             'keyword'     => $keyword,
                             'page'        => $page,
-                            'rank'        => $result['position'],
+                            'rank'        => $rank,
                             'matched_url' => $result['link'] ?? '',
                             'title'       => $result['title'] ?? '',
                         ]);
-                        return $result['position'];
+                        return $rank;
                     }
                 }
+
+                $resultsSeen += count($results);
 
                 // Short page (fewer results than requested) means Google has
                 // nothing further to show — no point paginating any deeper.

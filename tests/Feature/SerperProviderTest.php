@@ -33,6 +33,30 @@ class SerperProviderTest extends TestCase
         Http::assertSent(fn ($request): bool => $request['page'] === 10 && $request['num'] === 10);
     }
 
+    public function test_it_returns_overall_rank_for_page_local_positions(): void
+    {
+        $sequence = Http::fakeSequence();
+
+        for ($page = 1; $page < 7; $page++) {
+            $sequence->push(['organic' => array_map(
+                fn (int $position): array => ['position' => $position, 'link' => "https://other.test/{$page}/{$position}"],
+                range(1, 10),
+            )]);
+        }
+
+        $sequence->push(['organic' => array_map(
+            fn (int $position): array => [
+                'position' => $position,
+                'link' => $position === 7 ? 'https://www.example.com/page' : "https://other.test/7/{$position}",
+            ],
+            range(1, 10),
+        )]);
+
+        $provider = new SerperProvider('test-key');
+
+        $this->assertSame(67, $provider->getRank('test keyword', 'https://example.com'));
+    }
+
     public function test_it_does_not_match_a_domain_suffix(): void
     {
         Http::fake([
