@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Keyword;
 use App\Models\Setting;
 use App\Models\Website;
 use App\Services\Serp\SerpProviderFactory;
@@ -35,6 +36,17 @@ class DashboardController extends Controller
         $overallAvgRank = $websites->filter(fn($s) => $s->avg_rank)->avg('avg_rank');
         $overallAvgRank = $overallAvgRank ? round($overallAvgRank, 1) : null;
 
+        $todayRankings = Keyword::query()
+            ->where('is_active', true)
+            ->whereHas('website', fn($q) => $q->where('is_active', true))
+            ->with(['rankings' => fn($q) => $q
+                ->whereDate('checked_date', Carbon::today())
+                ->orderByDesc('checked_at')])
+            ->get()
+            ->map(fn($keyword) => $keyword->rankings->first())
+            ->filter();
+
+        $rankDistribution = $this->buildRankDistribution($todayRankings);
         $websiteTrend = $this->buildWebsiteTrendChart();
 
         $activeProvider = Setting::get('serp_provider') ?? config('serp.provider', 'serper');
@@ -48,8 +60,42 @@ class DashboardController extends Controller
 
         return view('dashboard.index', compact(
             'websites', 'totalWebsites', 'totalKeywords', 'totalTop10',
-            'overallAvgRank', 'providerName', 'apiCredits', 'websiteTrend'
+            'overallAvgRank', 'providerName', 'apiCredits', 'websiteTrend',
+            'rankDistribution'
         ));
+    }
+
+    protected function buildRankDistribution($rankings): array
+    {
+        $buckets = [
+            ['key' => 'top3', 'label' => 'Top 3', 'description' => 'High Priority / Winners', 'color' => '#10b981', 'count' => 0],
+            ['key' => 'top10', 'label' => 'Top 10', 'description' => 'First Page Rankings', 'color' => '#3b82f6', 'count' => 0],
+            ['key' => 'top20', 'label' => 'Top 20', 'description' => 'Striking Distance', 'color' => '#f59e0b', 'count' => 0],
+            ['key' => 'over20', 'label' => '20+', 'description' => 'Needs Optimization', 'color' => '#64748b', 'count' => 0],
+        ];
+
+        foreach ($rankings as $ranking) {
+            $rank = $ranking->rank_position;
+            $bucketIndex = match (true) {
+                $rank !== null && $rank >= 1 && $rank <= 3 => 0,
+                $rank !== null && $rank >= 4 && $rank <= 10 => 1,
+                $rank !== null && $rank >= 11 && $rank <= 20 => 2,
+                default => 3,
+            };
+
+            $buckets[$bucketIndex]['count']++;
+        }
+
+        $total = array_sum(array_column($buckets, 'count'));
+
+        foreach ($buckets as &$bucket) {
+            $bucket['percentage'] = $total > 0
+                ? round(($bucket['count'] / $total) * 100, 1)
+                : 0;
+        }
+        unset($bucket);
+
+        return ['total' => $total, 'buckets' => $buckets];
     }
 
     protected function buildWebsiteTrendChart(): array

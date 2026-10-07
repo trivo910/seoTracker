@@ -33,6 +33,47 @@
 
 </div>
 
+{{-- ─── Today's Keyword Rank Distribution ──────────────────── --}}
+<section class="bg-white rounded-xl border border-gray-200 p-5 mb-6" aria-labelledby="rank-distribution-title">
+    <div class="mb-5">
+        <h2 id="rank-distribution-title" class="font-semibold text-gray-800">Today's keyword performance</h2>
+        <p class="text-xs text-gray-400 mt-0.5">
+            {{ number_format($rankDistribution['total']) }} keywords checked today · Not found in results is included in 20+
+        </p>
+    </div>
+
+    @if($rankDistribution['total'] > 0)
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 items-center">
+        <div class="flex justify-center">
+            <svg id="keyword-rank-donut" viewBox="0 0 200 200" class="w-52 h-52 max-w-full"
+                 role="img" aria-label="Today's keyword ranking distribution"></svg>
+        </div>
+        <ul class="grid grid-cols-1 gap-3" aria-label="Ranking categories">
+            @foreach($rankDistribution['buckets'] as $bucket)
+            <li class="flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3 min-w-0">
+                    <span class="w-3 h-3 rounded-sm shrink-0" style="background-color: {{ $bucket['color'] }}"></span>
+                    <div class="min-w-0">
+                        <p class="text-sm font-medium text-gray-800">{{ $bucket['label'] }}</p>
+                        <p class="text-xs text-gray-400">{{ $bucket['description'] }}</p>
+                    </div>
+                </div>
+                <p class="text-sm font-semibold text-gray-900 whitespace-nowrap">
+                    {{ number_format($bucket['count']) }}
+                    <span class="text-xs font-normal text-gray-500">({{ number_format($bucket['percentage'], 1) }}%)</span>
+                </p>
+            </li>
+            @endforeach
+        </ul>
+    </div>
+    @else
+    <div class="flex flex-col items-center justify-center min-h-52 rounded-lg border border-dashed border-gray-200 bg-gray-50 text-center px-4">
+        <p class="text-sm font-medium text-gray-600">No keyword rankings checked today</p>
+        <p class="text-xs text-gray-400 mt-1">The chart will appear after today's rank checks are complete.</p>
+    </div>
+    @endif
+</section>
+
 {{-- ─── Website Trend Chart ──────────────────────────────────── --}}
 <div class="bg-white rounded-xl border border-gray-200 p-5 mb-6">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
@@ -227,8 +268,42 @@
 @push('scripts')
 <script>
     const chartData = @json($websiteTrend);
+    const rankDistribution = @json($rankDistribution);
     const chartColors = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#8b5cf6', '#ec4899'];
     let activeChartRange = 'weekly';
+
+    function renderRankDistribution() {
+        const svg = document.getElementById('keyword-rank-donut');
+        if (!svg || !rankDistribution.total) return;
+
+        const radius = 72;
+        const circumference = 2 * Math.PI * radius;
+        let offset = 0;
+
+        const slices = rankDistribution.buckets.map(bucket => {
+            if (!bucket.count) return '';
+
+            const length = circumference * (bucket.count / rankDistribution.total);
+            const slice = `
+                <circle cx="100" cy="100" r="${radius}" fill="none" stroke="${bucket.color}"
+                    stroke-width="28" stroke-dasharray="${length} ${circumference - length}"
+                    stroke-dashoffset="${-offset}" transform="rotate(-90 100 100)"
+                    tabindex="0" role="img"
+                    aria-label="${bucket.label}: ${bucket.count} keywords, ${bucket.percentage}%">
+                    <title>${bucket.label}: ${bucket.count} keywords (${bucket.percentage}%)</title>
+                </circle>
+            `;
+            offset += length;
+            return slice;
+        }).join('');
+
+        svg.innerHTML = `
+            <circle cx="100" cy="100" r="${radius}" fill="none" stroke="#f1f5f9" stroke-width="28"></circle>
+            ${slices}
+            <text x="100" y="96" text-anchor="middle" fill="#111827" font-size="25" font-weight="700">${rankDistribution.total}</text>
+            <text x="100" y="117" text-anchor="middle" fill="#6b7280" font-size="11">keywords</text>
+        `;
+    }
 
     function renderChart(rangeKey = activeChartRange) {
         const container = document.getElementById('website-chart');
@@ -317,6 +392,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+        renderRankDistribution();
         renderChart(activeChartRange);
 
         document.getElementById('website-chart-filter')?.addEventListener('change', () => {

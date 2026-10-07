@@ -82,7 +82,9 @@ class WebsiteController extends Controller
                     ->map(fn($r) => $r->rank_position);
 
                 $kw->rankingsMap = $rankMap;
-                $kw->today_rank  = $rankMap[Carbon::today()->format('Y-m-d')] ?? null;
+                $todayKey = Carbon::today()->format('Y-m-d');
+                $kw->today_checked = $rankMap->has($todayKey);
+                $kw->today_rank = $kw->today_checked ? $rankMap->get($todayKey) : null;
 
                 $yesterday = $rankMap[Carbon::yesterday()->format('Y-m-d')] ?? null;
                 $kw->rank_change = ($kw->today_rank && $yesterday)
@@ -102,6 +104,10 @@ class WebsiteController extends Controller
 
                 return $kw;
             });
+
+        $rankDistribution = $this->buildRankDistribution(
+            $keywords->filter(fn($keyword) => $keyword->today_checked)
+        );
 
         $totalKeywords = $keywords->count();
         $activeRanks   = $keywords->filter(fn($k) => $k->today_rank)->pluck('today_rank');
@@ -132,7 +138,40 @@ class WebsiteController extends Controller
         return view('websites.show', compact(
             'website', 'keywords', 'dateColumns', 'days',
             'totalKeywords', 'avgRank', 'top10Count', 'newThisWeek',
-            'rankTrend', 'top10Change', 'lastChecked'
+            'rankTrend', 'top10Change', 'lastChecked', 'rankDistribution'
         ));
+    }
+
+    protected function buildRankDistribution($keywords): array
+    {
+        $buckets = [
+            ['key' => 'top3', 'label' => 'Top 3', 'description' => 'High Priority / Winners', 'color' => '#10b981', 'count' => 0],
+            ['key' => 'top10', 'label' => 'Top 10', 'description' => 'First Page Rankings', 'color' => '#3b82f6', 'count' => 0],
+            ['key' => 'top20', 'label' => 'Top 20', 'description' => 'Striking Distance (Page 2)', 'color' => '#f59e0b', 'count' => 0],
+            ['key' => 'over20', 'label' => '20+', 'description' => 'Needs Optimization', 'color' => '#64748b', 'count' => 0],
+        ];
+
+        foreach ($keywords as $keyword) {
+            $rank = $keyword->today_rank;
+            $bucketIndex = match (true) {
+                $rank !== null && $rank >= 1 && $rank <= 3 => 0,
+                $rank !== null && $rank >= 4 && $rank <= 10 => 1,
+                $rank !== null && $rank >= 11 && $rank <= 20 => 2,
+                default => 3,
+            };
+
+            $buckets[$bucketIndex]['count']++;
+        }
+
+        $total = array_sum(array_column($buckets, 'count'));
+
+        foreach ($buckets as &$bucket) {
+            $bucket['percentage'] = $total > 0
+                ? round(($bucket['count'] / $total) * 100, 1)
+                : 0;
+        }
+        unset($bucket);
+
+        return ['total' => $total, 'buckets' => $buckets];
     }
 }

@@ -91,6 +91,8 @@ $rankBadge = fn($r) => !$r
 
 </div>
 
+<x-rank-distribution-donut :distribution="$rankDistribution" />
+
 {{-- ─── Rankings Table ──────────────────────────────────────── --}}
 <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
 
