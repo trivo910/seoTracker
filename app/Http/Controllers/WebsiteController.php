@@ -60,6 +60,11 @@ class WebsiteController extends Controller
         $days = (int) $request->get('days', 7);
         $days = in_array($days, [7, 14, 30]) ? $days : 7;
 
+        $validated = $request->validate([
+            'rank_date' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today'],
+        ]);
+        $rankDate = Carbon::parse($validated['rank_date'] ?? Carbon::today()->toDateString());
+
         $dateColumns = collect(range(1, $days - 1))
             ->map(fn($d) => Carbon::today()->subDays($d))
             ->reverse()
@@ -105,9 +110,15 @@ class WebsiteController extends Controller
                 return $kw;
             });
 
-        $rankDistribution = $this->buildRankDistribution(
-            $keywords->filter(fn($keyword) => $keyword->today_checked)
-        );
+        $rankingsOnDate = KeywordRanking::query()
+            ->whereHas('keyword', fn($query) => $query
+                ->where('website_id', $website->id)
+                ->where('is_active', true))
+            ->whereDate('checked_date', $rankDate->toDateString())
+            ->orderByDesc('checked_at')
+            ->get()
+            ->unique('keyword_id');
+        $rankDistribution = $this->buildRankDistribution($rankingsOnDate);
 
         $totalKeywords = $keywords->count();
         $activeRanks   = $keywords->filter(fn($k) => $k->today_rank)->pluck('today_rank');
@@ -138,7 +149,8 @@ class WebsiteController extends Controller
         return view('websites.show', compact(
             'website', 'keywords', 'dateColumns', 'days',
             'totalKeywords', 'avgRank', 'top10Count', 'newThisWeek',
-            'rankTrend', 'top10Change', 'lastChecked', 'rankDistribution'
+            'rankTrend', 'top10Change', 'lastChecked', 'rankDistribution',
+            'rankDate'
         ));
     }
 
@@ -152,7 +164,7 @@ class WebsiteController extends Controller
         ];
 
         foreach ($keywords as $keyword) {
-            $rank = $keyword->today_rank;
+            $rank = $keyword->rank_position;
             $bucketIndex = match (true) {
                 $rank !== null && $rank >= 1 && $rank <= 3 => 0,
                 $rank !== null && $rank >= 4 && $rank <= 10 => 1,

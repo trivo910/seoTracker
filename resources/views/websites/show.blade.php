@@ -91,7 +91,12 @@ $rankBadge = fn($r) => !$r
 
 </div>
 
-<x-rank-distribution-donut :distribution="$rankDistribution" />
+<x-rank-distribution-donut
+    :distribution="$rankDistribution"
+    :website="$website"
+    :days="$days"
+    :selected-date="$rankDate->toDateString()"
+/>
 
 {{-- ─── Rankings Table ──────────────────────────────────────── --}}
 <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">

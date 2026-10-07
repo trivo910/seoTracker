@@ -1,12 +1,33 @@
-@props(['distribution'])
+@props(['distribution', 'website', 'days', 'selectedDate'])
 
 <section class="bg-white rounded-xl border border-gray-200 p-5 mb-6" aria-labelledby="rank-distribution-title">
-    <div class="mb-5">
-        <h2 id="rank-distribution-title" class="font-semibold text-gray-800">Today's keyword performance</h2>
-        <p class="text-xs text-gray-400 mt-0.5">
-            {{ number_format($distribution['total']) }} keywords checked today
-            <span class="block sm:inline">· Keywords not checked today are excluded; not found in results is included in 20+</span>
-        </p>
+    <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-5">
+        <div>
+            <h2 id="rank-distribution-title" class="font-semibold text-gray-800">
+                {{ $selectedDate === now()->toDateString() ? "Today's keyword performance" : 'Keyword performance' }}
+            </h2>
+            <p class="text-xs text-gray-400 mt-0.5">
+                {{ number_format($distribution['total']) }} keywords checked on {{ \Carbon\Carbon::parse($selectedDate)->format('M j, Y') }}
+                <span class="block">Not found in results is included in 20+; unchecked keywords are excluded</span>
+            </p>
+        </div>
+        <form method="GET" action="{{ route('websites.show', $website) }}" class="flex flex-wrap items-end gap-3">
+            <input type="hidden" name="days" value="{{ $days }}">
+            <div>
+                <label for="rank-date" class="block text-xs font-medium text-gray-600 mb-1">Ranking date</label>
+                <input id="rank-date" type="date" name="rank_date" value="{{ $selectedDate }}"
+                       max="{{ now()->toDateString() }}" required
+                       class="px-3 py-2 text-sm border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <button type="submit"
+                    class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors">
+                Show date
+            </button>
+            <a href="{{ route('websites.show', [$website, 'days' => $days]) }}"
+               class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900">
+                Today
+            </a>
+        </form>
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 items-center">
