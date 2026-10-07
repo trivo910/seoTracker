@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Setting;
 use App\Models\Website;
 use App\Services\Serp\SerpProviderFactory;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
@@ -34,6 +35,8 @@ class DashboardController extends Controller
         $overallAvgRank = $websites->filter(fn($s) => $s->avg_rank)->avg('avg_rank');
         $overallAvgRank = $overallAvgRank ? round($overallAvgRank, 1) : null;
 
+        $websiteTrend = $this->buildWebsiteTrendChart();
+
         $activeProvider = Setting::get('serp_provider') ?? config('serp.provider', 'serper');
         $providerName   = config("serp.providers.{$activeProvider}.name", ucfirst($activeProvider));
 
@@ -45,7 +48,97 @@ class DashboardController extends Controller
 
         return view('dashboard.index', compact(
             'websites', 'totalWebsites', 'totalKeywords', 'totalTop10',
-            'overallAvgRank', 'providerName', 'apiCredits'
+            'overallAvgRank', 'providerName', 'apiCredits', 'websiteTrend'
         ));
+    }
+
+    protected function buildWebsiteTrendChart(): array
+    {
+        $sites = Website::where('is_active', true)
+            ->with([
+                'keywords' => function ($q) {
+                    $q->where('is_active', true)
+                        ->with(['rankings' => function ($r) {
+                            $r->select('keyword_id', 'checked_date', 'rank_position')
+                                ->whereNotNull('rank_position');
+                        }]);
+                },
+            ])
+            ->orderBy('name')
+            ->get();
+
+        $ranges = [
+            'daily' => [
+                'label' => 'Days',
+                'dates' => collect(range(0, 29))->map(fn($i) => Carbon::today()->subDays(29 - $i)),
+                'bucket' => fn($date) => $date->format('Y-m-d'),
+            ],
+            'weekly' => [
+                'label' => 'Weeks',
+                'dates' => collect(range(0, 11))->map(fn($i) => Carbon::today()->subWeeks(11 - $i)->startOfWeek()),
+                'bucket' => fn($date) => $date->copy()->startOfWeek()->format('Y-W'),
+            ],
+            'quarterly' => [
+                'label' => 'Quarterly',
+                'dates' => collect(range(0, 7))->map(fn($i) => Carbon::today()->subMonths((7 - $i) * 3)->startOfQuarter()),
+                'bucket' => fn($date) => $date->copy()->startOfQuarter()->format('Y') . '-Q' . $date->copy()->startOfQuarter()->quarter,
+            ],
+        ];
+
+        $chartData = [];
+
+        foreach ($ranges as $key => $config) {
+            $labels = $config['dates']->map(function ($date) use ($key) {
+                return match ($key) {
+                    'daily' => $date->format('M j'),
+                    'weekly' => 'Wk ' . $date->weekOfYear,
+                    'quarterly' => 'Q' . $date->quarter . ' ' . $date->year,
+                    default => $date->format('M j'),
+                };
+            })->values()->all();
+
+            $series = $sites->map(function ($site) use ($config, $key) {
+                $values = [];
+
+                foreach ($config['dates'] as $date) {
+                    $bucketKey = $config['bucket']($date);
+                    $ranks = [];
+
+                    foreach ($site->keywords as $keyword) {
+                        foreach ($keyword->rankings as $ranking) {
+                            $rankingDate = $ranking->checked_date instanceof Carbon
+                                ? $ranking->checked_date
+                                : Carbon::parse($ranking->checked_date);
+
+                            $rankingKey = match ($key) {
+                                'daily' => $rankingDate->format('Y-m-d'),
+                                'weekly' => $rankingDate->copy()->startOfWeek()->format('Y-W'),
+                                'quarterly' => $rankingDate->copy()->startOfQuarter()->format('Y') . '-Q' . $rankingDate->copy()->startOfQuarter()->quarter,
+                                default => $rankingDate->format('Y-m-d'),
+                            };
+
+                            if ($rankingKey === $bucketKey) {
+                                $ranks[] = (int) $ranking->rank_position;
+                            }
+                        }
+                    }
+
+                    $values[] = $ranks ? round(array_sum($ranks) / count($ranks), 1) : null;
+                }
+
+                return [
+                    'name' => $site->name,
+                    'values' => $values,
+                ];
+            })->values()->all();
+
+            $chartData[$key] = [
+                'label' => $config['label'],
+                'labels' => $labels,
+                'series' => $series,
+            ];
+        }
+
+        return $chartData;
     }
 }

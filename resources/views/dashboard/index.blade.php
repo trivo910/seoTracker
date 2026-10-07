@@ -33,6 +33,33 @@
 
 </div>
 
+{{-- ─── Website Trend Chart ──────────────────────────────────── --}}
+<div class="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+        <div>
+            <h2 class="font-semibold text-gray-800">Website performance trend</h2>
+            <p class="text-xs text-gray-400 mt-0.5">Average rank across active websites</p>
+        </div>
+        <div class="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1">
+            @foreach(['daily' => 'Days', 'weekly' => 'Weeks', 'quarterly' => 'Quarterly'] as $key => $label)
+                <button type="button" data-chart-range="{{ $key }}" class="chart-range-btn px-3 py-1.5 text-xs font-medium rounded-md transition-colors {{ $loop->first ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-800' }}">
+                    {{ $label }}
+                </button>
+            @endforeach
+        </div>
+    </div>
+
+    @if(!empty($websiteTrend) && !empty($websiteTrend['daily']['series']))
+        <div class="relative">
+            <svg id="website-chart" viewBox="0 0 980 320" class="w-full h-80 overflow-visible"></svg>
+        </div>
+    @else
+        <div class="flex items-center justify-center h-60 border border-dashed border-gray-200 rounded-xl bg-gray-50 text-sm text-gray-400">
+            No ranking history yet for the selected websites.
+        </div>
+    @endif
+</div>
+
 {{-- ─── Websites Table ──────────────────────────────────────── --}}
 <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
 
@@ -187,6 +214,112 @@
     </div>
     @endif
 </div>
+
+@push('scripts')
+<script>
+    const chartData = @json($websiteTrend);
+    const chartColors = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#8b5cf6', '#ec4899'];
+
+    function renderChart(rangeKey = 'daily') {
+        const container = document.getElementById('website-chart');
+        if (!container || !chartData || !chartData[rangeKey]) return;
+
+        const config = chartData[rangeKey];
+        const labels = config.labels || [];
+        const series = config.series || [];
+
+        const width = 980;
+        const height = 320;
+        const padding = { top: 20, right: 20, bottom: 28, left: 48 };
+
+        const allValues = series.flatMap(item => item.values.filter(v => v !== null && v !== undefined));
+        const minValue = allValues.length ? Math.min(...allValues) : 0;
+        const maxValue = allValues.length ? Math.max(...allValues) : 1;
+        const yMin = Math.max(1, Math.floor(minValue) - 2);
+        const yMax = Math.max(10, Math.ceil(maxValue) + 2);
+
+        const plotWidth = width - padding.left - padding.right;
+        const plotHeight = height - padding.top - padding.bottom;
+        const xStep = labels.length > 1 ? plotWidth / (labels.length - 1) : plotWidth;
+
+        const makePath = (values) => {
+            return values.map((value, index) => {
+                if (value === null || value === undefined) return null;
+                const x = padding.left + (index * xStep);
+                const y = padding.top + plotHeight - ((value - yMin) / (yMax - yMin || 1)) * plotHeight;
+                return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+            }).filter(Boolean).join(' ');
+        };
+
+        const lines = series.map((item, index) => {
+            const path = makePath(item.values);
+            const color = chartColors[index % chartColors.length];
+            return `
+                <path d="${path}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path>
+                ${item.values.map((value, idx) => {
+                    if (value === null || value === undefined) return '';
+                    const x = padding.left + (idx * xStep);
+                    const y = padding.top + plotHeight - ((value - yMin) / (yMax - yMin || 1)) * plotHeight;
+                    return `<circle cx="${x}" cy="${y}" r="3.2" fill="${color}" />`;
+                }).join('')}
+            `;
+        }).join('');
+
+        const yTicks = Array.from({ length: 5 }, (_, idx) => {
+            const value = yMax - ((yMax - yMin) / 4) * idx;
+            const y = padding.top + plotHeight - (idx / 4) * plotHeight;
+            return `
+                <line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" stroke="#e5e7eb" stroke-dasharray="4 4" />
+                <text x="${padding.left - 10}" y="${y + 4}" fill="#6b7280" font-size="10" text-anchor="end">${Math.round(value)}</text>
+            `;
+        }).join('');
+
+        const xTicks = labels.map((label, idx) => {
+            const x = padding.left + (idx * xStep);
+            return `<text x="${x}" y="${height - 8}" fill="#6b7280" font-size="10" text-anchor="middle">${label}</text>`;
+        }).join('');
+
+        const legend = series.map((item, index) => {
+            const color = chartColors[index % chartColors.length];
+            return `
+                <g transform="translate(${padding.left + index * 180}, 12)">
+                    <rect width="10" height="10" rx="2" fill="${color}" />
+                    <text x="16" y="9" fill="#374151" font-size="11">${item.name}</text>
+                </g>
+            `;
+        }).join('');
+
+        container.innerHTML = `
+            <g>
+                ${yTicks}
+                <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${height - padding.bottom}" stroke="#d1d5db" />
+                <line x1="${padding.left}" y1="${height - padding.bottom}" x2="${width - padding.right}" y2="${height - padding.bottom}" stroke="#d1d5db" />
+                ${xTicks}
+                ${lines}
+                ${legend}
+            </g>
+        `;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        renderChart('daily');
+
+        document.querySelectorAll('.chart-range-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                document.querySelectorAll('.chart-range-btn').forEach(btn => {
+                    btn.classList.toggle('bg-white', btn === button);
+                    btn.classList.toggle('text-indigo-700', btn === button);
+                    btn.classList.toggle('shadow-sm', btn === button);
+                    btn.classList.toggle('text-gray-600', btn !== button);
+                    btn.classList.toggle('hover:text-gray-800', btn !== button);
+                    btn.classList.toggle('bg-gray-50', btn !== button);
+                });
+                renderChart(button.dataset.chartRange);
+            });
+        });
+    });
+</script>
+@endpush
 
 {{-- ─── ADD WEBSITE MODAL ───────────────────────────────────── --}}
 @if(auth()->user()->isManager())
