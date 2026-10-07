@@ -230,43 +230,24 @@
 
         const width = 980;
         const height = 320;
-        const padding = { top: 20, right: 20, bottom: 28, left: 48 };
+        const padding = { top: 20, right: 20, bottom: 34, left: 48 };
 
         const allValues = series.flatMap(item => item.values.filter(v => v !== null && v !== undefined));
-        const minValue = allValues.length ? Math.min(...allValues) : 0;
         const maxValue = allValues.length ? Math.max(...allValues) : 1;
-        const yMin = Math.max(1, Math.floor(minValue) - 2);
         const yMax = Math.max(10, Math.ceil(maxValue) + 2);
-
         const plotWidth = width - padding.left - padding.right;
         const plotHeight = height - padding.top - padding.bottom;
-        const xStep = labels.length > 1 ? plotWidth / (labels.length - 1) : plotWidth;
 
-        const makePath = (values) => {
-            return values.map((value, index) => {
-                if (value === null || value === undefined) return null;
-                const x = padding.left + (index * xStep);
-                const y = padding.top + plotHeight - ((value - yMin) / (yMax - yMin || 1)) * plotHeight;
-                return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
-            }).filter(Boolean).join(' ');
-        };
+        if (!labels.length || !series.length) {
+            container.innerHTML = '';
+            return;
+        }
 
-        const lines = series.map((item, index) => {
-            const path = makePath(item.values);
-            const color = chartColors[index % chartColors.length];
-            return `
-                <path d="${path}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path>
-                ${item.values.map((value, idx) => {
-                    if (value === null || value === undefined) return '';
-                    const x = padding.left + (idx * xStep);
-                    const y = padding.top + plotHeight - ((value - yMin) / (yMax - yMin || 1)) * plotHeight;
-                    return `<circle cx="${x}" cy="${y}" r="3.2" fill="${color}" />`;
-                }).join('')}
-            `;
-        }).join('');
+        const groupWidth = plotWidth / labels.length;
+        const barWidth = Math.min(18, Math.max(10, (groupWidth / Math.max(1, series.length + 1)) * 0.8));
 
         const yTicks = Array.from({ length: 5 }, (_, idx) => {
-            const value = yMax - ((yMax - yMin) / 4) * idx;
+            const value = yMax - ((yMax) / 4) * idx;
             const y = padding.top + plotHeight - (idx / 4) * plotHeight;
             return `
                 <line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" stroke="#e5e7eb" stroke-dasharray="4 4" />
@@ -275,8 +256,21 @@
         }).join('');
 
         const xTicks = labels.map((label, idx) => {
-            const x = padding.left + (idx * xStep);
+            const x = padding.left + (idx * groupWidth) + (groupWidth / 2);
             return `<text x="${x}" y="${height - 8}" fill="#6b7280" font-size="10" text-anchor="middle">${label}</text>`;
+        }).join('');
+
+        const bars = labels.map((label, idx) => {
+            const groupX = padding.left + (idx * groupWidth) + 10;
+            return series.map((item, seriesIndex) => {
+                const value = item.values[idx];
+                if (value === null || value === undefined) return '';
+                const x = groupX + (seriesIndex * (barWidth + 4));
+                const barHeight = (value / yMax) * plotHeight;
+                const y = padding.top + plotHeight - barHeight;
+                const color = chartColors[seriesIndex % chartColors.length];
+                return `<rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" rx="4" fill="${color}" opacity="0.9"></rect>`;
+            }).join('');
         }).join('');
 
         const legend = series.map((item, index) => {
@@ -294,8 +288,8 @@
                 ${yTicks}
                 <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${height - padding.bottom}" stroke="#d1d5db" />
                 <line x1="${padding.left}" y1="${height - padding.bottom}" x2="${width - padding.right}" y2="${height - padding.bottom}" stroke="#d1d5db" />
+                ${bars}
                 ${xTicks}
-                ${lines}
                 ${legend}
             </g>
         `;
