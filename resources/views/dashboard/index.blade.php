@@ -40,12 +40,21 @@
             <h2 class="font-semibold text-gray-800">Website performance trend</h2>
             <p class="text-xs text-gray-400 mt-0.5">Average rank across active websites</p>
         </div>
-        <div class="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1">
-            @foreach(['monthly' => 'Months', 'weekly' => 'Weeks', 'quarterly' => 'Quarterly'] as $key => $label)
-                <button type="button" data-chart-range="{{ $key }}" class="chart-range-btn px-3 py-1.5 text-xs font-medium rounded-md transition-colors {{ $key === 'weekly' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-800' }}">
-                    {{ $label }}
-                </button>
-            @endforeach
+        <div class="flex flex-wrap items-center gap-3">
+            <label for="website-chart-filter" class="sr-only">Filter chart by website</label>
+            <select id="website-chart-filter" class="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="all">All websites</option>
+                @foreach($websiteTrend['weekly']['series'] ?? [] as $series)
+                    <option value="{{ $series['id'] }}">{{ $series['name'] }}</option>
+                @endforeach
+            </select>
+            <div class="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1">
+                @foreach(['monthly' => 'Months', 'weekly' => 'Weeks', 'quarterly' => 'Quarterly'] as $key => $label)
+                    <button type="button" data-chart-range="{{ $key }}" class="chart-range-btn px-3 py-1.5 text-xs font-medium rounded-md transition-colors {{ $key === 'weekly' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-800' }}">
+                        {{ $label }}
+                    </button>
+                @endforeach
+            </div>
         </div>
     </div>
 
@@ -219,14 +228,18 @@
 <script>
     const chartData = @json($websiteTrend);
     const chartColors = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#8b5cf6', '#ec4899'];
+    let activeChartRange = 'weekly';
 
-    function renderChart(rangeKey = 'daily') {
+    function renderChart(rangeKey = activeChartRange) {
         const container = document.getElementById('website-chart');
         if (!container || !chartData || !chartData[rangeKey]) return;
 
         const config = chartData[rangeKey];
         const labels = config.labels || [];
-        const series = config.series || [];
+        const selectedWebsiteId = document.getElementById('website-chart-filter')?.value || 'all';
+        const series = (config.series || []).filter(item =>
+            selectedWebsiteId === 'all' || String(item.id) === selectedWebsiteId
+        );
 
         const width = 980;
         const height = 320;
@@ -245,6 +258,12 @@
 
         const groupWidth = plotWidth / labels.length;
         const barWidth = Math.min(18, Math.max(10, (groupWidth / Math.max(1, series.length + 1)) * 0.8));
+        const escapeSvgText = (text) => String(text)
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&apos;');
 
         const yTicks = Array.from({ length: 5 }, (_, idx) => {
             const value = yMax - ((yMax) / 4) * idx;
@@ -261,7 +280,8 @@
         }).join('');
 
         const bars = labels.map((label, idx) => {
-            const groupX = padding.left + (idx * groupWidth) + 10;
+            const totalBarsWidth = (series.length * barWidth) + (Math.max(0, series.length - 1) * 4);
+            const groupX = padding.left + (idx * groupWidth) + ((groupWidth - totalBarsWidth) / 2);
             return series.map((item, seriesIndex) => {
                 const value = item.values[idx];
                 if (value === null || value === undefined) return '';
@@ -269,7 +289,8 @@
                 const barHeight = (value / yMax) * plotHeight;
                 const y = padding.top + plotHeight - barHeight;
                 const color = chartColors[seriesIndex % chartColors.length];
-                return `<rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" rx="4" fill="${color}" opacity="0.9"></rect>`;
+                const tooltip = `${item.name} — ${label}: average rank ${Number(value).toFixed(1)}`;
+                return `<rect class="chart-bar" x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" rx="4" fill="${color}" opacity="0.9" tabindex="0" role="img" aria-label="${escapeSvgText(tooltip)}"><title>${escapeSvgText(tooltip)}</title></rect>`;
             }).join('');
         }).join('');
 
@@ -278,7 +299,7 @@
             return `
                 <g transform="translate(${padding.left + index * 180}, 12)">
                     <rect width="10" height="10" rx="2" fill="${color}" />
-                    <text x="16" y="9" fill="#374151" font-size="11">${item.name}</text>
+                    <text x="16" y="9" fill="#374151" font-size="11">${escapeSvgText(item.name)}</text>
                 </g>
             `;
         }).join('');
@@ -296,7 +317,11 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        renderChart('weekly');
+        renderChart(activeChartRange);
+
+        document.getElementById('website-chart-filter')?.addEventListener('change', () => {
+            renderChart(activeChartRange);
+        });
 
         document.querySelectorAll('.chart-range-btn').forEach(button => {
             button.addEventListener('click', () => {
@@ -308,7 +333,8 @@
                     btn.classList.toggle('hover:text-gray-800', btn !== button);
                     btn.classList.toggle('bg-gray-50', btn !== button);
                 });
-                renderChart(button.dataset.chartRange);
+                activeChartRange = button.dataset.chartRange;
+                renderChart(activeChartRange);
             });
         });
     });

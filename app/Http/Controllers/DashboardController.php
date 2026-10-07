@@ -127,6 +127,7 @@ class DashboardController extends Controller
                 }
 
                 return [
+                    'id' => $site->id,
                     'name' => $site->name,
                     'values' => $values,
                 ];
