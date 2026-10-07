@@ -41,15 +41,15 @@
             <p class="text-xs text-gray-400 mt-0.5">Average rank across active websites</p>
         </div>
         <div class="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1">
-            @foreach(['daily' => 'Days', 'weekly' => 'Weeks', 'quarterly' => 'Quarterly'] as $key => $label)
-                <button type="button" data-chart-range="{{ $key }}" class="chart-range-btn px-3 py-1.5 text-xs font-medium rounded-md transition-colors {{ $loop->first ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-800' }}">
+            @foreach(['monthly' => 'Months', 'weekly' => 'Weeks', 'quarterly' => 'Quarterly'] as $key => $label)
+                <button type="button" data-chart-range="{{ $key }}" class="chart-range-btn px-3 py-1.5 text-xs font-medium rounded-md transition-colors {{ $key === 'weekly' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-800' }}">
                     {{ $label }}
                 </button>
             @endforeach
         </div>
     </div>
 
-    @if(!empty($websiteTrend) && !empty($websiteTrend['daily']['series']))
+    @if(!empty($websiteTrend) && !empty($websiteTrend['weekly']['series']))
         <div class="relative">
             <svg id="website-chart" viewBox="0 0 980 320" class="w-full h-80 overflow-visible"></svg>
         </div>
@@ -296,7 +296,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        renderChart('daily');
+        renderChart('weekly');
 
         document.querySelectorAll('.chart-range-btn').forEach(button => {
             button.addEventListener('click', () => {

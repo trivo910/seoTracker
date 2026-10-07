@@ -68,10 +68,10 @@ class DashboardController extends Controller
             ->get();
 
         $ranges = [
-            'daily' => [
-                'label' => 'Days',
-                'dates' => collect(range(0, 29))->map(fn($i) => Carbon::today()->subDays(29 - $i)),
-                'bucket' => fn($date) => $date->format('Y-m-d'),
+            'monthly' => [
+                'label' => 'Months',
+                'dates' => collect(range(0, 11))->map(fn($i) => Carbon::today()->subMonths(11 - $i)->startOfMonth()),
+                'bucket' => fn($date) => $date->copy()->startOfMonth()->format('Y-m'),
             ],
             'weekly' => [
                 'label' => 'Weeks',
@@ -90,10 +90,10 @@ class DashboardController extends Controller
         foreach ($ranges as $key => $config) {
             $labels = $config['dates']->map(function ($date) use ($key) {
                 return match ($key) {
-                    'daily' => $date->format('M j'),
+                    'monthly' => $date->format('M Y'),
                     'weekly' => 'Wk ' . $date->weekOfYear,
                     'quarterly' => 'Q' . $date->quarter . ' ' . $date->year,
-                    default => $date->format('M j'),
+                    default => $date->format('M Y'),
                 };
             })->values()->all();
 
@@ -111,10 +111,10 @@ class DashboardController extends Controller
                                 : Carbon::parse($ranking->checked_date);
 
                             $rankingKey = match ($key) {
-                                'daily' => $rankingDate->format('Y-m-d'),
+                                'monthly' => $rankingDate->copy()->startOfMonth()->format('Y-m'),
                                 'weekly' => $rankingDate->copy()->startOfWeek()->format('Y-W'),
                                 'quarterly' => $rankingDate->copy()->startOfQuarter()->format('Y') . '-Q' . $rankingDate->copy()->startOfQuarter()->quarter,
-                                default => $rankingDate->format('Y-m-d'),
+                                default => $rankingDate->copy()->startOfMonth()->format('Y-m'),
                             };
 
                             if ($rankingKey === $bucketKey) {
