@@ -49,6 +49,8 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('role:admin,manager')->group(function () {
         Route::post('/keywords',           [KeywordController::class, 'store'])->name('keywords.store');
         Route::put('/keywords/{keyword}',  [KeywordController::class, 'update'])->name('keywords.update');
+        Route::post('/keywords/{keyword}/refresh', [KeywordController::class, 'refresh'])
+            ->name('keywords.refresh');
     });
 
     Route::delete('/keywords/{keyword}', [KeywordController::class, 'destroy'])

@@ -21,6 +21,10 @@ class RankCheckJob implements ShouldQueue
     public int $tries   = 3;
     public int $timeout = 300;
 
+    public function __construct(public ?int $keywordId = null)
+    {
+    }
+
     public function handle(): void
     {
         $log       = Log::channel('jobs');
@@ -31,7 +35,14 @@ class RankCheckJob implements ShouldQueue
         $language = Setting::get('serp_language') ?? config('serp.language', 'en');
         $today    = Carbon::today()->toDateString();
 
-        $keywords = Keyword::with('website')->where('is_active', true)->get();
+        $keywordQuery = Keyword::with('website');
+        if ($this->keywordId === null) {
+            $keywordQuery->where('is_active', true);
+        } else {
+            $keywordQuery->whereKey($this->keywordId);
+        }
+
+        $keywords = $keywordQuery->get();
 
         $log->info('RankCheckJob started', [
             'provider'       => $provider->getName(),
@@ -49,10 +60,10 @@ class RankCheckJob implements ShouldQueue
 
             // Skip if already checked today
             $alreadyChecked = KeywordRanking::where('keyword_id', $keyword->id)
-                ->where('checked_date', $today)
+                ->whereDate('checked_date', $today)
                 ->exists();
 
-            if ($alreadyChecked) {
+            if ($alreadyChecked && $this->keywordId === null) {
                 $skipped++;
                 $log->debug('Skipped — already checked today', [
                     'keyword' => $keyword->keyword,
@@ -75,13 +86,18 @@ class RankCheckJob implements ShouldQueue
                     $country
                 );
 
-                KeywordRanking::create([
-                    'keyword_id'    => $keyword->id,
+                $ranking = KeywordRanking::where('keyword_id', $keyword->id)
+                    ->whereDate('checked_date', $today)
+                    ->first() ?? new KeywordRanking([
+                        'keyword_id' => $keyword->id,
+                        'checked_date' => $today,
+                    ]);
+
+                $ranking->fill([
                     'rank_position' => $rank,
                     'provider'      => $provider->getName(),
-                    'checked_date'  => $today,
                     'checked_at'    => now(),
-                ]);
+                ])->save();
 
                 $checked++;
 

@@ -20,12 +20,10 @@ class SerperProvider implements SerpProviderInterface
         $log          = Log::channel('jobs');
         $targetDomain = $this->extractDomain($targetUrl);
 
-        // Serper caps organic results at ~10 per call regardless of `num`, so
-        // paginate via `page` to cover positions up to 100, stopping as soon
-        // as a match is found or a short page shows there's nothing further.
+        // Serper returns at most 10 organic results per page. Continue through
+        // short pages because Google can return fewer than 10 results on a page.
         $perPage  = 10;
         $maxPages = 10;
-        $resultsSeen = 0;
 
         try {
             for ($page = 1; $page <= $maxPages; $page++) {
@@ -71,7 +69,7 @@ class SerperProvider implements SerpProviderInterface
 
                 foreach ($results as $index => $result) {
                     if ($this->matches($this->extractDomain($result['link'] ?? ''), $targetDomain)) {
-                        $rank = $resultsSeen + $index + 1;
+                        $rank = (($page - 1) * $perPage) + $index + 1;
                         $log->debug('Serper API → match found', [
                             'keyword'     => $keyword,
                             'page'        => $page,
@@ -83,11 +81,7 @@ class SerperProvider implements SerpProviderInterface
                     }
                 }
 
-                $resultsSeen += count($results);
-
-                // Short page (fewer results than requested) means Google has
-                // nothing further to show — no point paginating any deeper.
-                if (count($results) < $perPage) {
+                if ($results === []) {
                     break;
                 }
             }

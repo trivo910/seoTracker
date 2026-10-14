@@ -45,7 +45,7 @@ class DashboardController extends Controller
             ->get()
             ->map(fn($keyword) => $keyword->rankings->first())
             ->filter();
-
+        
         $rankDistribution = $this->buildRankDistribution($todayRankings);
         $websiteTrend = $this->buildWebsiteTrendChart();
 

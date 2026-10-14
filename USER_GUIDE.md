@@ -234,11 +234,13 @@ By default, the system automatically checks rankings once per day (at midnight v
 2. Click **Check Now** (button visible to managers and admins).
 3. A background job is dispatched. Rankings will update within a few minutes depending on how many keywords are tracked.
 
+To check one keyword only, go to **Keywords** and click the refresh icon in that keyword's Actions column. This queues a check for that keyword and replaces its ranking for today if one already exists.
+
 > Rank checks are rate-limited to one keyword per second to avoid exceeding API quotas.
 
 ### Skip Logic
 
-If a keyword has already been checked today, it is skipped automatically — the job will not double-bill your API credits.
+The scheduled and bulk checks skip keywords already checked today. A manual check for an individual keyword runs again and updates that day's existing ranking record.
 
 ---
 

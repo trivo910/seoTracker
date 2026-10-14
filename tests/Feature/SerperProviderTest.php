@@ -57,6 +57,34 @@ class SerperProviderTest extends TestCase
         $this->assertSame(67, $provider->getRank('test keyword', 'https://example.com'));
     }
 
+    public function test_it_continues_past_short_pages_and_finds_a_third_page_rank(): void
+    {
+        $sequence = Http::fakeSequence()
+            ->push(['organic' => array_map(
+                fn (int $position): array => [
+                    'position' => $position,
+                    'link' => "https://other.test/1/{$position}",
+                ],
+                range(1, 9),
+            )])
+            ->push(['organic' => array_map(
+                fn (int $position): array => [
+                    'position' => $position,
+                    'link' => "https://other.test/2/{$position}",
+                ],
+                range(1, 10),
+            )])
+            ->push(['organic' => [
+                ['position' => 1, 'link' => 'https://example.com/page'],
+            ]]);
+
+        $provider = new SerperProvider('test-key');
+
+        $this->assertSame(21, $provider->getRank('test keyword', 'https://example.com'));
+        Http::assertSentCount(3);
+        Http::assertSent(fn ($request): bool => $request['page'] === 3);
+    }
+
     public function test_it_does_not_match_a_domain_suffix(): void
     {
         Http::fake([

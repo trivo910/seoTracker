@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\RankCheckJob;
 use App\Models\ActivityLog;
 use App\Models\Keyword;
 use App\Models\Website;
@@ -107,6 +108,13 @@ class KeywordController extends Controller
         );
 
         return back()->with('success', "Keyword \"{$keyword->keyword}\" updated.");
+    }
+
+    public function refresh(Keyword $keyword)
+    {
+        RankCheckJob::dispatch($keyword->id);
+
+        return back()->with('success', "Ranking check queued for \"{$keyword->keyword}\".");
     }
 
     public function destroy(Keyword $keyword)
