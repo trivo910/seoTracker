@@ -123,7 +123,6 @@ class WebsiteController extends Controller
         $totalKeywords = $keywords->count();
         $activeRanks   = $keywords->filter(fn($k) => $k->today_rank)->pluck('today_rank');
         $avgRank       = $activeRanks->avg() ?? 0;
-        $top10Count    = $activeRanks->filter(fn($r) => $r <= 10)->count();
         $newThisWeek   = $website->keywords()->where('created_at', '>=', Carbon::now()->subWeek())->count();
 
         $yesterdayAvg = $keywords->map(function ($k) {
@@ -136,20 +135,33 @@ class WebsiteController extends Controller
             elseif ($avgRank > $yesterdayAvg) $rankTrend = 'down';
         }
 
-        $yesterdayTop10 = $keywords->filter(function ($k) {
-            $r = $k->rankingsMap[Carbon::yesterday()->format('Y-m-d')] ?? null;
-            return $r && $r <= 10;
-        })->count();
-        $top10Change = $top10Count - $yesterdayTop10;
-
-        $lastChecked = KeywordRanking::whereHas('keyword', fn($q) => $q->where('website_id', $website->id))
+        $activeWebsiteRankings = KeywordRanking::query()
+            ->whereHas('keyword', fn($query) => $query
+                ->where('website_id', $website->id)
+                ->where('is_active', true));
+        $latestRanking = (clone $activeWebsiteRankings)
             ->latest('checked_at')
-            ->value('checked_at');
+            ->first(['checked_date', 'checked_at']);
+        $top10Date = $latestRanking?->checked_date;
+        $lastChecked = $latestRanking?->checked_at;
+        $top10Count = $top10Date
+            ? (clone $activeWebsiteRankings)
+                ->whereDate('checked_date', $top10Date->toDateString())
+                ->whereBetween('rank_position', [1, 10])
+                ->count()
+            : 0;
+        $previousTop10Count = $top10Date
+            ? (clone $activeWebsiteRankings)
+                ->whereDate('checked_date', $top10Date->copy()->subDay()->toDateString())
+                ->whereBetween('rank_position', [1, 10])
+                ->count()
+            : 0;
+        $top10Change = $top10Date ? $top10Count - $previousTop10Count : null;
 
         return view('websites.show', compact(
             'website', 'keywords', 'dateColumns', 'days',
             'totalKeywords', 'avgRank', 'top10Count', 'newThisWeek',
-            'rankTrend', 'top10Change', 'lastChecked', 'rankDistribution',
+            'rankTrend', 'top10Change', 'top10Date', 'lastChecked', 'rankDistribution',
             'rankDate'
         ));
     }

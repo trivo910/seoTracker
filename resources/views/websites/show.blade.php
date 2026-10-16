@@ -63,18 +63,25 @@ $rankBadge = fn($r) => !$r
     <div class="bg-white rounded-xl border border-gray-200 p-5">
         <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Top 10 Keywords</p>
         <p class="text-3xl font-bold text-gray-900 mt-2">{{ $top10Count }}</p>
-        @if($top10Change != 0)
+        @if(!is_null($top10Change) && $top10Change !== 0)
         <p class="text-xs mt-1.5 flex items-center gap-1 {{ $top10Change > 0 ? 'text-green-600' : 'text-red-500' }}">
             @if($top10Change > 0)
                 <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18" /></svg>
-                +{{ $top10Change }} today
+                +{{ $top10Change }} vs previous day
             @else
                 <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3" /></svg>
-                {{ $top10Change }} today
+                {{ $top10Change }} vs previous day
             @endif
         </p>
+        @elseif(!is_null($top10Change))
+        <p class="text-xs text-gray-400 mt-1.5">— same as previous day</p>
         @else
-        <p class="text-xs text-gray-400 mt-1.5">— same today</p>
+        <p class="text-xs text-gray-400 mt-1.5">No rankings checked yet</p>
+        @endif
+        @if($top10Date)
+        <p class="text-xs text-gray-400 mt-1.5">
+            Rankings on {{ $top10Date->format('j M Y') }}
+        </p>
         @endif
     </div>
 
