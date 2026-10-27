@@ -15,7 +15,11 @@ class RankingsController extends Controller
      */
     public function refresh(Request $request)
     {
-        RankCheckJob::dispatch();
+        $data = $request->validate([
+            'website_id' => ['nullable', 'integer', 'exists:websites,id'],
+        ]);
+
+        RankCheckJob::dispatch(websiteId: isset($data['website_id']) ? (int) $data['website_id'] : null);
 
         return back()->with('success', 'Rank check job dispatched. Results will update in a few minutes.');
     }

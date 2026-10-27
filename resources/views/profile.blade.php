@@ -52,9 +52,11 @@
         </div>
 
         <div class="mt-8 pt-6 border-t border-gray-100">
-            <p class="text-xs text-gray-400 text-center">
-                To change your password or email, contact an administrator.
-            </p>
+            @if(auth()->user()->isAdmin())
+            <a href="{{ route('users.password.edit', auth()->user()) }}" class="text-sm text-indigo-600 hover:underline">Change Password</a>
+            @else
+            <p class="text-xs text-gray-400 text-center">To change your password or email, contact an administrator.</p>
+            @endif
         </div>
     </div>
 </div>

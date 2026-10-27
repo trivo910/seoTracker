@@ -182,13 +182,23 @@ $rankBadge = fn($r) => !$r
                     <td class="px-4 py-3 text-gray-400 text-xs">{{ $i + 1 }}</td>
 
                     <td class="px-4 py-3">
-                        <div class="font-medium text-gray-800">{{ $kw->keyword }}</div>
-                        @if($kw->target_url)
-                        <a href="{{ $kw->target_url }}" target="_blank"
-                           class="text-xs text-indigo-500 hover:text-indigo-700 truncate block max-w-xs">
-                            {{ parse_url($kw->target_url, PHP_URL_PATH) ?: '/' }}
-                        </a>
-                        @endif
+                        <div class="flex items-center gap-2">
+                            <span class="font-medium text-gray-800">{{ $kw->keyword }}</span>
+                            @if(auth()->user()->isManager())
+                            <form method="POST" action="{{ route('keywords.refresh', $kw) }}"
+                                  onsubmit="const button = this.querySelector('button'); button.disabled = true; button.title = 'Checking...'; button.querySelector('svg').classList.add('animate-spin');">
+                                @csrf
+                                <button type="submit"
+                                    class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50 rounded-lg whitespace-nowrap disabled:opacity-50"
+                                    title="Get current ranking for {{ $kw->keyword }}"
+                                    aria-label="Get current ranking for {{ $kw->keyword }}">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                                    </svg>
+                                </button>
+                            </form>
+                            @endif
+                        </div>
                     </td>
 
                     <td class="px-4 py-3 text-center">

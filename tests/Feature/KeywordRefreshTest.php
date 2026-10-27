@@ -7,6 +7,7 @@ use App\Models\Keyword;
 use App\Models\KeywordRanking;
 use App\Models\Setting;
 use App\Models\User;
+use App\Models\Website;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -35,7 +36,7 @@ class KeywordRefreshTest extends TestCase
         $this->actingAs($manager)
             ->get(route('keywords.index'))
             ->assertOk()
-            ->assertSee(route('keywords.refresh', $keyword), false);
+            ->assertDontSee(route('keywords.refresh', $keyword), false);
 
         $this->from(route('keywords.index'))
             ->actingAs($manager)
@@ -123,4 +124,55 @@ class KeywordRefreshTest extends TestCase
         ]);
         $this->assertSame(1, KeywordRanking::where('keyword_id', $selected->id)->count());
     }
+
+    public function test_website_refresh_only_calls_api_for_that_websites_active_keywords(): void
+    {
+        $user = User::factory()->create(['role' => 'manager', 'is_active' => true]);
+        $websites = [];
+        foreach (['selected', 'other'] as $name) {
+            $websites[] = Website::create(['name' => $name, 'domain' => $name.'.test',
+                'base_url' => 'https://'.$name.'.test', 'created_by' => $user->id]);
+        }
+        $keywords = [];
+        foreach ([$websites[0]->id, $websites[1]->id, null, $websites[0]->id] as $i => $websiteId) {
+            $keywords[] = Keyword::create(['website_id' => $websiteId, 'keyword' => 'keyword '.$i,
+                'target_url' => 'https://example.com', 'created_by' => $user->id,
+                'updated_by' => $user->id, 'is_active' => $i !== 3]);
+        }
+        Queue::fake();
+        $this->actingAs($user)->from(route('websites.show', $websites[0]))
+            ->post(route('rankings.refresh'), ['website_id' => $websites[0]->id])
+            ->assertRedirect(route('websites.show', $websites[0]));
+        $job = null;
+        Queue::assertPushed(RankCheckJob::class, function ($queued) use (&$job, $websites) {
+            $job = $queued;
+            return $queued->websiteId === $websites[0]->id && $queued->keywordId === null;
+        });
+        Http::fake(['google.serper.dev/search' => Http::response(['organic' => [['link' => 'https://example.com']]])]);
+        $job->handle();
+        Http::assertSentCount(1);
+        Http::assertSent(fn ($request) => $request['q'] === 'keyword 0');
+        $this->assertDatabaseHas('keyword_rankings', ['keyword_id' => $keywords[0]->id]);
+        foreach (array_slice($keywords, 1) as $keyword) {
+            $this->assertDatabaseMissing('keyword_rankings', ['keyword_id' => $keyword->id]);
+        }
+    }
+
+    public function test_invalid_website_cannot_queue_a_global_refresh(): void
+    {
+        Queue::fake();
+        $this->actingAs(User::factory()->create(['role' => 'admin', 'is_active' => true]))
+            ->post(route('rankings.refresh'), ['website_id' => 999999])
+            ->assertSessionHasErrors('website_id');
+        Queue::assertNothingPushed();
+    }
+
+    public function test_refresh_without_website_preserves_global_scope(): void
+    {
+        Queue::fake();
+        $this->actingAs(User::factory()->create(['role' => 'admin', 'is_active' => true]))
+            ->post(route('rankings.refresh'))->assertSessionHas('success');
+        Queue::assertPushed(RankCheckJob::class, fn ($job) => $job->websiteId === null && $job->keywordId === null);
+    }
+
 }

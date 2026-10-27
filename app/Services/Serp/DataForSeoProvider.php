@@ -11,7 +11,7 @@ class DataForSeoProvider implements SerpProviderInterface
     private string $password;
     private string $baseUrl = 'https://api.dataforseo.com/v3';
 
-    public function __construct(string $login, string $password)
+    public function __construct(string $login, string $password, private string $language = 'en', private int $results = 100)
     {
         $this->login    = $login;
         $this->password = $password;
@@ -24,8 +24,8 @@ class DataForSeoProvider implements SerpProviderInterface
                 ->post("{$this->baseUrl}/serp/google/organic/live/advanced", [[
                     'keyword'       => $keyword,
                     'location_code' => $this->countryCode($country),
-                    'language_code' => 'en',
-                    'depth'         => 100,
+                    'language_code' => $this->language,
+                    'depth'         => $this->results,
                 ]]);
 
             if (! $response->successful()) {
@@ -77,7 +77,7 @@ class DataForSeoProvider implements SerpProviderInterface
         return match(strtolower($c)) {
             'in' => 2356,
             'us' => 2840,
-            'uk' => 2826,
+            'uk', 'gb' => 2826,
             default => 2356,
         };
     }

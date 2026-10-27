@@ -21,7 +21,7 @@ class RankCheckJob implements ShouldQueue
     public int $tries   = 3;
     public int $timeout = 300;
 
-    public function __construct(public ?int $keywordId = null)
+    public function __construct(public ?int $keywordId = null, public ?int $websiteId = null)
     {
     }
 
@@ -40,6 +40,10 @@ class RankCheckJob implements ShouldQueue
             $keywordQuery->where('is_active', true);
         } else {
             $keywordQuery->whereKey($this->keywordId);
+        }
+
+        if ($this->websiteId !== null) {
+            $keywordQuery->where('website_id', $this->websiteId);
         }
 
         $keywords = $keywordQuery->get();

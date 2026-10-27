@@ -10,7 +10,7 @@ class SerpApiProvider implements SerpProviderInterface
     private string $apiKey;
     private string $baseUrl = 'https://serpapi.com';
 
-    public function __construct(string $apiKey)
+    public function __construct(string $apiKey, private string $language = 'en', private int $results = 100)
     {
         $this->apiKey = $apiKey;
     }
@@ -22,8 +22,8 @@ class SerpApiProvider implements SerpProviderInterface
                 'api_key' => $this->apiKey,
                 'q'       => $keyword,
                 'gl'      => $country,
-                'hl'      => 'en',
-                'num'     => 100,
+                'hl'      => $this->language,
+                'num'     => $this->results,
                 'engine'  => 'google',
             ]);
 

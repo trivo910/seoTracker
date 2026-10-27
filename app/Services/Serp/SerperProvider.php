@@ -10,7 +10,7 @@ class SerperProvider implements SerpProviderInterface
     private string $apiKey;
     private string $baseUrl = 'https://google.serper.dev';
 
-    public function __construct(string $apiKey)
+    public function __construct(string $apiKey, private string $language = 'en', private int $results = 100)
     {
         $this->apiKey = $apiKey;
     }
@@ -23,7 +23,7 @@ class SerperProvider implements SerpProviderInterface
         // Serper returns at most 10 organic results per page. Continue through
         // short pages because Google can return fewer than 10 results on a page.
         $perPage  = 10;
-        $maxPages = 10;
+        $maxPages = (int) ceil($this->results / $perPage);
 
         try {
             for ($page = 1; $page <= $maxPages; $page++) {
@@ -40,7 +40,7 @@ class SerperProvider implements SerpProviderInterface
                 ])->post("{$this->baseUrl}/search", [
                     'q'    => $keyword,
                     'gl'   => $country,
-                    'hl'   => 'en',
+                    'hl'   => $this->language,
                     'num'  => $perPage,
                     'page' => $page,
                 ]);
@@ -68,6 +68,9 @@ class SerperProvider implements SerpProviderInterface
                 ]);
 
                 foreach ($results as $index => $result) {
+                    if ((($page - 1) * $perPage) + $index >= $this->results) {
+                        break;
+                    }
                     if ($this->matches($this->extractDomain($result['link'] ?? ''), $targetDomain)) {
                         $rank = (($page - 1) * $perPage) + $index + 1;
                         $log->debug('Serper API → match found', [

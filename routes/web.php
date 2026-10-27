@@ -79,10 +79,13 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/users',             [UserController::class, 'store'])->name('users.store');
         Route::put('/users/{user}',       [UserController::class, 'update'])->name('users.update');
 
+        Route::get('/users/{user}/password', [UserController::class, 'editPassword'])->name('users.password.edit');
+        Route::put('/users/{user}/password', [UserController::class, 'updatePassword'])->middleware('throttle:6,1')->name('users.password.update');
+
         // API settings
         Route::get('/settings/api',       [ApiSettingsController::class, 'index'])->name('settings.api.index');
         Route::put('/settings/api',       [ApiSettingsController::class, 'update'])->name('settings.api.update');
-        Route::get('/settings/api/test',  [ApiSettingsController::class, 'test'])->name('settings.api.test');
+        Route::post('/settings/api/test',  [ApiSettingsController::class, 'test'])->name('settings.api.test');
     });
 
     // ── Profile ──────────────────────────────────────────────────

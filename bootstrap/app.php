@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
     })
     ->withExceptions(function (Exceptions $exceptions) {
+        $exceptions->dontFlash(['api_key']);
 
         // Show a friendly 403 page instead of a raw exception
         $exceptions->renderable(function (\Symfony\Component\HttpKernel\Exception\HttpException $e, $request) {

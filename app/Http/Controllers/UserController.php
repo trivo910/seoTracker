@@ -69,4 +69,37 @@ class UserController extends Controller
 
         return back()->with('success', "User \"{$user->name}\" updated.");
     }
+
+    public function editPassword(User $user)
+    {
+        return view('users.password', compact('user'));
+    }
+
+    public function updatePassword(Request $request, User $user)
+    {
+        $data = $request->validate([
+            'current_password' => ['required', 'current_password'],
+            'password' => ['required', 'string', 'confirmed', Password::min(8)],
+        ]);
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($user, $data) {
+            $user->forceFill([
+                'password' => Hash::make($data['password']),
+                'remember_token' => \Illuminate\Support\Str::random(60),
+            ])->save();
+
+            ActivityLog::record(
+                userId: auth()->id(), action: 'user.password_changed',
+                modelType: 'User', modelId: $user->id,
+                description: "Password changed for user: {$user->name}"
+            );
+        });
+
+        if ($user->id === $request->user()->id) {
+            $request->session()->regenerate();
+        }
+
+        return redirect()->route('users.index')->with('success', "Password changed for {$user->name}.");
+    }
+
 }
